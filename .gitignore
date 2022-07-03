@@ -1,0 +1,17 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/infoflow
+infoflow.so
+infoflow.dylib
+infoflow.dll
+infoflow.a
+infoflow.lib
+infoflow-test-*
+*.exe
+*.o
+*.obj
+*.lst
+*.a
+*-test-*

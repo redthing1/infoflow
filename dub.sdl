@@ -1,0 +1,8 @@
+name "infoflow"
+description "information flow and binary analysis"
+authors "redthing1"
+copyright "Copyright © 2022, redthing1"
+license "proprietary"
+targetType "library"
+
+
