@@ -74,8 +74,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
     /** analyzer for dynamic information flow tracking **/
     class IFTAnalyzer : TBaseAnalysis.BaseAnalyzer {
         Commit clobber;
-        InfoSources[TRegSet] clobbered_regs_sources;
-        InfoSources[TRegWord] clobbered_mem_sources;
+        InfoLeafs[TRegSet] clobbered_regs_sources;
+        InfoLeafs[TRegWord] clobbered_mem_sources;
         IFTDataType included_data = IFTDataType.All;
         IFTTreeNode[] ift_trees;
         bool enable_ift_tree = false;
@@ -275,7 +275,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             assert(0, format("could not find touching commit for node: %s, commit <= #%d", node, from_commit));
         }
 
-        InfoSource[] backtrace_information_flow(InfoNode last_node) {
+        InfoLeaf[] backtrace_information_flow(InfoNode last_node) {
             // 1. get the commit corresponding to this node
             auto last_node_last_touch_ix =
                 find_commit_last_touching(last_node, last_commit_ix);
@@ -296,9 +296,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             auto unvisited = DList!InfoNodeWalk();
             bool[InfoNodeWalk] visited;
 
-            auto terminal_leaves = appender!(InfoSource[]);
+            auto terminal_leaves = appender!(InfoLeaf[]);
 
-            pragma(inline, true) void add_info_leaf(InfoSource leaf) {
+            pragma(inline, true) void add_info_leaf(InfoLeaf leaf) {
                 terminal_leaves ~= leaf;
                 version (analysis_log)
                     log_found_sources++;
@@ -357,7 +357,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // we found raw source data, no dependencies
                     // this is a leaf source, so we want to record it
                     // all data comes from some sort of leaf source
-                    auto leaf = InfoSource(curr.node, curr.owner_commit_ix);
+                    auto leaf = InfoLeaf(curr.node, curr.owner_commit_ix);
                     add_info_leaf(leaf);
                     mixin(LOG_TRACE!(`format("   leaf (source): %s", leaf)`));
 
@@ -376,7 +376,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         // we should record this as a leaf source
                         // let's update the type to mmio
                         curr.node.type = InfoType.MMIO;
-                        auto leaf = InfoSource(curr.node, curr.owner_commit_ix);
+                        auto leaf = InfoLeaf(curr.node, curr.owner_commit_ix);
                         add_info_leaf(leaf);
                         mixin(LOG_TRACE!(`format("   leaf (mmio): %s", leaf)`));
 
@@ -395,7 +395,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                     update_curr_node_tree_flags();
 
-                    auto leaf = InfoSource(curr.node, curr.owner_commit_ix);
+                    auto leaf = InfoLeaf(curr.node, curr.owner_commit_ix);
                     add_info_leaf(leaf);
                     mixin(LOG_TRACE!(`format("   leaf (pc): %s", leaf)`));
 
@@ -409,7 +409,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // this means some information was found to have been traced to the initial snapshot
                     // this counts as a leaf node
 
-                    auto leaf = InfoSource(curr.node, -1); // the current node came from the initial snapshot
+                    auto leaf = InfoLeaf(curr.node, -1); // the current node came from the initial snapshot
                     add_info_leaf(leaf);
                     mixin(LOG_TRACE!(`format("   leaf (pre-initial): %s", leaf)`));
 
@@ -616,7 +616,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // dump backtraces
             writefln(" backtraces:");
 
-            void log_commit_for_source(InfoSource source) {
+            void log_commit_for_source(InfoLeaf source) {
                 writef("   %s", source);
                 if (source.commit_id >= 0) {
                     auto commit = trace.commits[source.commit_id];
