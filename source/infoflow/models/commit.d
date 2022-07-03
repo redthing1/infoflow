@@ -2,7 +2,12 @@ module infoflow.models.commit;
 
 import std.algorithm.mutation;
 
-template InfoLog(TRegWord, TMemWord, TRegSet, int register_count) {
+template InfoLog(TRegWord, TMemWord, TRegSet) {
+    import std.traits;
+
+    enum REGISTER_COUNT = [EnumMembers!TRegSet].length;
+    static assert(REGISTER_COUNT > 0, "register count must be greater than 0");
+
     template GenAliases(string prefix) {
         import std.format;
 
@@ -72,7 +77,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet, int register_count) {
     }
 
     struct Snapshot {
-        public TRegWord[register_count] reg;
+        public TRegWord[REGISTER_COUNT] reg;
         public MemoryMap[] memory_map;
         public MemoryPageTable tracked_mem;
 

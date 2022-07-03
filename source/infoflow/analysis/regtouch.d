@@ -2,9 +2,9 @@ module analyzers.regtouch;
 
 import infoflow.analysis.common;
 
-template RegTouchAnalysis(TRegWord, TMemWord, TRegSet, int register_count) {
-    alias TInfoLog = InfoLog!(TRegWord, TMemWord, TRegSet, register_count);
-    alias TBaseAnalysis = BaseAnalysis!(TRegWord, TMemWord, TRegSet, register_count);
+template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
+    alias TInfoLog = InfoLog!(TRegWord, TMemWord, TRegSet);
+    alias TBaseAnalysis = BaseAnalysis!(TRegWord, TMemWord, TRegSet);
     mixin(TInfoLog.GenAliases!("TInfoLog"));
 
     class RegTouchAnalyzer : TBaseAnalysis.BaseAnalyzer {

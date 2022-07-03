@@ -4,14 +4,19 @@ import std.container.dlist;
 import std.typecons;
 import std.array: appender;
 import infoflow.analysis.common;
+import std.algorithm.iteration: map, filter, fold;
 
 import infoflow.util;
 
-template IFTAnalysis(TRegWord, TMemWord, TRegSet, int register_count) {
-    alias TInfoLog = InfoLog!(TRegWord, TMemWord, TRegSet, register_count);
-    alias TBaseAnalysis = BaseAnalysis!(TRegWord, TMemWord, TRegSet, register_count);
+template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
+    import std.traits;
+
+    alias TInfoLog = InfoLog!(TRegWord, TMemWord, TRegSet);
+    alias TBaseAnalysis = BaseAnalysis!(TRegWord, TMemWord, TRegSet);
     mixin(TInfoLog.GenAliases!("TInfoLog"));
 
+    static assert([EnumMembers!TRegSet].map!(x => x.to!string).canFind!(x => x == "PC"),
+        "enum TRegSet must contain a program counter register PC");
     enum PC_REGISTER = to!TRegSet("PC");
 
     class IFTTreeNode {
@@ -134,7 +139,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet, int register_count) {
 
             if (included_data & IFTDataType.Registers) {
                 // 1. find regs that changed
-                for (auto i = 0; i < register_count; i++) {
+                for (auto i = 0; i < TInfoLog.REGISTER_COUNT; i++) {
                     TRegSet reg_id = i.to!TRegSet;
                     if (snap_init.reg[reg_id] != snap_final.reg[reg_id]) {
                         // this TRegSet changed between the initial and final state
