@@ -274,26 +274,16 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         InfoNode[] as_nodes() {
             InfoNode[] nodes;
 
-            // check info type
-            switch (type) {
-            case InfoType.Combined:
-                assert(0, "combined commit is not supported to create info nodes");
-            case InfoType.Register:
-                // add a node for each register
-                for (auto i = 0; i < reg_ids.length; i++) {
-                    auto node = InfoNode(InfoType.Register, reg_ids[i], reg_values[i]);
-                    nodes ~= node;
-                }
-                break;
-            case InfoType.Memory:
-                // add a node for each memory address
-                for (auto i = 0; i < mem_addrs.length; i++) {
-                    auto node = InfoNode(InfoType.Memory, mem_addrs[i], mem_values[i]);
-                    nodes ~= node;
-                }
-                break;
-            default:
-                assert(0, "invalid commit info type for creating info nodes");
+            // add a node for each register
+            for (auto i = 0; i < reg_ids.length; i++) {
+                auto node = InfoNode(InfoType.Register, reg_ids[i], reg_values[i]);
+                nodes ~= node;
+            }
+            
+            // add a node for each memory address
+            for (auto i = 0; i < mem_addrs.length; i++) {
+                auto node = InfoNode(InfoType.Memory, mem_addrs[i], mem_values[i]);
+                nodes ~= node;
             }
 
             return nodes;
