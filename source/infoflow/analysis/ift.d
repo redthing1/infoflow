@@ -20,10 +20,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
     enum PC_REGISTER = to!TRegSet("PC");
 
     class IFTTreeNode {
-        ulong commit_id; // the ID of the commit corresponding to this node
+        long commit_id; // the ID of the commit corresponding to this node
         InfoNode node; // the corresponding information node
 
-        this(ulong commit_id, InfoNode node) {
+        this(long commit_id, InfoNode node) {
             this.commit_id = commit_id;
             this.node = node;
         }
