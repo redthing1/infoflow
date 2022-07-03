@@ -132,7 +132,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
         }
 
-        void calculate_clobber() {
+        Commit calculate_clobber() {
             // calculate the total clobber commit between the initial and final state
             // 1. reset clobber
             clobber = Commit();
@@ -201,6 +201,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     }
                 }
             }
+
+            return clobber;
         }
 
         long find_last_commit_at_pc(TRegWord pc_val, long from_commit) {
