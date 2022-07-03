@@ -17,8 +17,8 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             alias CommitTrace = %s.CommitTrace;
             alias InfoType = %s.InfoType;
             alias InfoNode = %s.InfoNode;
-            alias InfoSource = %s.InfoSource;
-            alias InfoSources = %s.InfoSources;
+            alias InfoLeaf = %s.InfoLeaf;
+            alias InfoLeafs = %s.InfoLeafs;
             alias ImmediatePos = %s.ImmediatePos;
             alias MemoryMap = %s.MemoryMap;
             alias MemoryPageTable = %s.MemoryPageTable;
@@ -149,10 +149,14 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         ABC = A | B | C,
     }
 
+    /// represents a unit of information, in the form of a (type, data, value) tuple
     struct InfoNode {
-        InfoType type; // information type: register or memory?
-        TRegWord data; // can be register id or memory address
-        TRegWord value; // can be register value or memory value
+        /// information type: could be register, memory, etc.
+        InfoType type;
+        /// can be register id, memory address, or other, depending on type
+        TRegWord data;
+        /// can be immediate value, register value, memory value, or other, depending on type
+        TRegWord value;
 
         string toString() const {
             import std.string : format;
@@ -190,6 +194,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             return sb.array;
         }
 
+        ///  whether this is a final source (cannot be further traced to more sources)
         bool is_final() const {
             return type == InfoType.Immediate
                 || type == InfoType.Device
@@ -198,7 +203,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
                 || type == InfoType.DeterministicRegister;
         }
 
-        /** returns whether this is a deterministic source */
+        ///  whether this is a deterministic source (will always have the same value)
         bool is_deterministic() const {
             return type == InfoType.Immediate;
         }
@@ -218,7 +223,10 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
 
         alias Source = InfoNode;
 
+        /// the type of effects this commit has
         InfoType type;
+        /// program counter
+        TRegWord pc;
         /// dest reg ids
         TRegWord[] reg_ids;
         /// dest reg values
@@ -227,11 +235,9 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         TRegWord[] mem_addrs;
         /// dest mem values
         TMemWord[] mem_values;
-        /// program counter
-        TRegWord pc;
-        /// sources
+        /// sources for this commit
         Source[] sources;
-        /// description or comment, usually contains disassembled instruction
+        /// description or comment, usually contains disassembled instruction or other misc info
         string description;
 
         ref Commit with_type(InfoType type) {
@@ -266,7 +272,8 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             return this;
         }
 
-        InfoNode[] as_nodes() {
+        /// converts this commit to info nodes
+        InfoNode[] to_nodes() {
             InfoNode[] nodes;
 
             // add a node for each register
@@ -328,8 +335,11 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         }
     }
 
-    struct InfoSource {
+    /// represents a terminal leaf source of information
+    struct InfoLeaf {
+        /// the information contained at this leaf
         InfoNode node;
+        /// the commit where this leaf originated
         long commit_id;
 
         string toString() const {
@@ -339,7 +349,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
 
             auto sb = appender!string;
 
-            sb ~= format("InfoSource(node: %s, commit_id: %s)", node, commit_id);
+            sb ~= format("InfoLeaf(node: %s, commit_id: %s)", node, commit_id);
 
             return sb.array;
         }
@@ -353,7 +363,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         }
     }
 
-    alias InfoSources = InfoSource[];
+    alias InfoLeafs = InfoLeaf[];
 
     struct CommitTrace {
         public Snapshot[] snapshots;
