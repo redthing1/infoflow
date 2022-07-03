@@ -19,10 +19,9 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             alias InfoNode = %s.InfoNode;
             alias InfoLeaf = %s.InfoLeaf;
             alias InfoLeafs = %s.InfoLeafs;
-            alias ImmediatePos = %s.ImmediatePos;
             alias MemoryMap = %s.MemoryMap;
             alias MemoryPageTable = %s.MemoryPageTable;
-        `, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix);
+        `, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix);
     }
 
     struct MemoryMap {
@@ -131,22 +130,6 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         Reserved2,
         Reserved3,
         Reserved4,
-    }
-
-    enum ImmediatePos : TRegWord {
-        NONE = (0 << 0),
-        A = (1 << 0),
-        B = (1 << 1),
-        C = (1 << 2),
-        D = (1 << 3),
-        E = (1 << 4),
-        F = (1 << 5),
-        G = (1 << 6),
-        H = (1 << 7),
-
-        BC = B | C,
-
-        ABC = A | B | C,
     }
 
     /// represents a unit of information, in the form of a (type, data, value) tuple
