@@ -92,12 +92,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             TRegWord page_base_address;
             if (!tracked_mem.get_page(addr, page, page_base_address)) {
                 import std.format;
-                // failed to find the page
-                // import std.stdio;
-                // writefln("the current pages:");
-                // foreach (page; tracked_mem.pages) {
-                //     writefln("- $%08x", page.address);
-                // }
+                
                 assert(0, format("failed to find page for address 0x%x (base address 0x%x)", addr, page_base_address));
             }
 
@@ -322,17 +317,6 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             sb ~= format(" <source: ");
             for (auto i = 0; i < sources.length; i++) {
                 auto source = sources[i];
-                // string source_type_str = _type_abbreviations[source.type];
-                // switch (source.type) {
-                // case InfoType.Register : sb ~= format(" %s=$%04x", source.data.to!TRegSet, source.value);
-                //     break;
-                // case InfoType.Memory : sb ~= format(" mem[$%08x]=%02x", source.data, source.value);
-                //     break;
-                // case InfoType.Immediate : sb ~= format(" i=$%04x", source.value);
-                //     break;
-                // case InfoType.Device : sb ~= format(" dev#%02x(%02x)", source.data, source.value);
-                // default : assert(0);
-                // }
                 sb ~= format(" %s", source.toString());
             }
             sb ~= format(">");
@@ -374,9 +358,5 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
     struct CommitTrace {
         public Snapshot[] snapshots;
         public Commit[] commits;
-
-        // @property long length() {
-        //     return commits.length;
-        // }
     }
 }
