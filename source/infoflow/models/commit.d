@@ -234,24 +234,36 @@ template InfoLog(TRegWord, TMemWord, TRegSet, int register_count) {
         /// description or comment, usually contains disassembled instruction
         string description;
 
-        static Commit from_regs(TRegWord[] reg_ids, TRegWord[] reg_values) {
-            Commit c;
-            c.type = InfoType.Register;
-            c.reg_ids = reg_ids;
-            c.reg_values = reg_values;
-            return c;
+        ref Commit with_type(InfoType type) {
+            this.type = type;
+            return this;
         }
 
-        static Commit from_reg(TRegWord reg_id, TRegWord reg_value) {
-            return from_regs([reg_id], [reg_value]);
+        ref Commit with_dest_regs(TRegWord[] reg_ids, TRegWord[] reg_values) {
+            this.reg_ids = reg_ids;
+            this.reg_values = reg_values;
+            return this;
         }
 
-        static Commit from_mem(TRegWord[] mem_addrs, TMemWord[] mem_values) {
-            Commit c;
-            c.type = InfoType.Memory;
-            c.mem_addrs = mem_addrs;
-            c.mem_values = mem_values;
-            return c;
+        ref Commit with_dest_mem(TRegWord[] mem_addrs, TMemWord[] mem_values) {
+            this.mem_addrs = mem_addrs;
+            this.mem_values = mem_values;
+            return this;
+        }
+
+        ref Commit with_pc(TRegWord pc) {
+            this.pc = pc;
+            return this;
+        }
+
+        ref Commit with_sources(Source[] sources) {
+            this.sources = sources;
+            return this;
+        }
+
+        ref Commit with_description(string description) {
+            this.description = description;
+            return this;
         }
 
         InfoNode[] as_nodes() {
