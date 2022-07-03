@@ -5,4 +5,10 @@ copyright "Copyright © 2022, redthing1"
 license "proprietary"
 targetType "library"
 
+configuration "default" {
+	versions "default"
+}
+configuration "analysis_log" {
+	versions "analysis_log"
+}
 
