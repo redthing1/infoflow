@@ -24,6 +24,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         `, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix);
     }
 
+    /// memory map entry
     struct MemoryMap {
         enum Type {
             Unknown,
@@ -36,15 +37,21 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         string section_name;
     }
 
+    /// memory page table: create pages with make_page, get pages with page[page_base_address]
     struct MemoryPageTable {
+        /// the size of pages in this table
         enum PAGE_SIZE = 4096;
+        
+        /// represents a single page
         struct Page {
             TRegWord address;
             TMemWord[] mem;
         }
 
+        /// all the known pages in this page table
         Page[TRegWord] pages;
 
+        /// given a lookup address, get the data of a page and its base address
         public bool get_page(TRegWord address, out Page page, out TRegWord page_base_address) {
             // get base address
             auto base_address = address & ~(PAGE_SIZE - 1);
@@ -57,6 +64,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             return false;
         }
 
+        /// create a new empty page at the specified aligned base address
         public Page make_page(TRegWord address) {
             import std.format;
 
@@ -75,16 +83,21 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         }
     }
 
+    /// represents a discrete snapshot of system state
     struct Snapshot {
+        /// all registers and their values
         public TRegWord[REGISTER_COUNT] reg;
+        /// memory map
         public MemoryMap[] memory_map;
+        /// memory page table populated with all memory data
         public MemoryPageTable tracked_mem;
 
-        // access functions
+        /// get the value of a register
         public TRegWord get_reg(ulong id) {
             return reg[id];
         }
 
+        /// get the value of a memory address
         public TMemWord get_mem(TRegWord addr) {
             // try to get the page for this address
             MemoryPageTable.Page page;
@@ -99,6 +112,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             return page.mem[addr - page.address];   
         }
 
+        /// get the type of memory at this location from the memory map
         public MemoryMap.Type get_mem_type(TRegWord addr) {
             // gp through memory map in reverse
             for (auto i = (cast(long) memory_map.length) - 1; i >= 0; i--) {
@@ -116,6 +130,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         }
     }
 
+    /// represents a type of information
     enum InfoType {
         Unknown = 0x0,
         None = 0x1,
@@ -192,6 +207,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         }
     }
 
+    /// represents a discrete unit of change in system state, usually corresponds to execution of an instruction
     struct Commit {
         private enum string[InfoType] _type_abbreviations = [
                 InfoType.Unknown: "unk",
@@ -349,7 +365,9 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
     alias InfoLeafs = InfoLeaf[];
 
     struct CommitTrace {
+        /// the snapshots contained in this trace
         public Snapshot[] snapshots;
+        /// the commits contained in this trace
         public Commit[] commits;
     }
 }
