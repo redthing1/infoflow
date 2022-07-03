@@ -12,8 +12,8 @@ public {
     import infoflow.util;
 }
 
-template BaseAnalysis(TRegWord, TMemWord, TRegSet, int register_count) {
-    alias TInfoLog = InfoLog!(TRegWord, TMemWord, TRegSet, register_count);
+template BaseAnalysis(TRegWord, TMemWord, TRegSet) {
+    alias TInfoLog = InfoLog!(TRegWord, TMemWord, TRegSet);
     mixin(TInfoLog.GenAliases!("TInfoLog"));
 
     class BaseAnalyzer {
