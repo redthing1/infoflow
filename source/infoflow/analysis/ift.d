@@ -95,7 +95,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             All = (Registers | Memory | Special),
         }
 
-        this(CommitTrace commit_trace, bool parallelized) {
+        this(CommitTrace commit_trace, bool parallelized = false) {
             super(commit_trace, parallelized);
         }
 

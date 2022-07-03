@@ -8,7 +8,7 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
     mixin(TInfoLog.GenAliases!("TInfoLog"));
 
     class RegTouchAnalyzer : TBaseAnalysis.BaseAnalyzer {
-        this(CommitTrace commit_trace, bool parallelized) {
+        this(CommitTrace commit_trace, bool parallelized = false) {
             super(commit_trace, parallelized);
         }
 
