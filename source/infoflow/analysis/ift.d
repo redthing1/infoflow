@@ -536,9 +536,21 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             pragma(inline, true) void log_found_sources(InfoLeaf[] sources) {
+                if (analysis_parallelized) {
+                    // assert(0, "log_found_sources should not be called when parallel enabled");
+                    return;
+                }
+                
                 mixin(LOG_INFO!(
                     `format(" sources found: %s (~ %.3f KiB)", sources.length,
                     (sources.length * InfoNode.sizeof) / 1024.0)`));
+                if (enable_ift_tree) {
+                    auto last_tree = ift_trees[$ - 1];
+                    mixin(LOG_INFO!(
+                        `format(" last tree: %s, (~ %.3f KiB)", last_tree,
+                        (sources.length * IFTTreeNode.sizeof) / 1024.0)`));
+                        
+                }
             }
 
             pragma(inline, true) void do_reg_trace(InfoNode last_node) {
