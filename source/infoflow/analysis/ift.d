@@ -2,7 +2,7 @@ module analyzers.ift;
 
 import std.container.dlist;
 import std.typecons;
-import std.array : appender;
+import std.array : appender, array;
 import infoflow.analysis.common;
 import std.algorithm.iteration : map, filter, fold;
 
@@ -145,8 +145,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     if (snap_init.reg[reg_id] != snap_final.reg[reg_id]) {
                         // this TRegSet changed between the initial and final state
                         // store commit that clobbers this TRegSet
-                        clobber.reg_ids ~= reg_id;
-                        clobber.reg_values ~= snap_final.reg[reg_id];
+                        clobber.effects ~= InfoNode(InfoType.Register, reg_id, snap_final.reg[reg_id]);
                     }
                 }
             }
@@ -158,8 +157,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         if (snap_init.get_mem(mem_addr) != snap_final.get_mem(mem_addr)) {
                             // this memory changed between the initial and final state
                             // store commit that clobbers this memory
-                            clobber.mem_addrs ~= mem_addr;
-                            clobber.mem_values ~= snap_final.get_mem(mem_addr);
+                            clobber.effects ~= InfoNode(InfoType.Memory, mem_addr, snap_final.get_mem(mem_addr));
                         }
                     }
                 }
@@ -185,19 +183,21 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         // so we'll only check registers
 
                         // find the registers that are clobbered by this commit
-                        for (auto k = 0; k < commit.reg_ids.length; k++) {
-                            auto reg_id = commit.reg_ids[k];
-                            auto reg_val = commit.reg_values[k];
-                            if (clobber.reg_ids.canFind(reg_id)) {
-                                // this TRegSet is already clobbered
-                                // so we don't need to do anything
-                                continue;
-                            }
+                        for (auto k = 0; k < commit.effects.length; k++) {
+                            auto effect = commit.effects[k];
+                            if (effect.type & InfoType.Register) {
+                                auto reg_id = effect.data;
+                                auto reg_val = effect.value;
+                                if (clobber.effects.canFind!(x => x.data == reg_id)) {
+                                    // this TRegSet is already clobbered
+                                    // so we don't need to do anything
+                                    continue;
+                                }
 
-                            // this TRegSet is not clobbered yet
-                            // so we need to add it to the clobber list
-                            clobber.reg_ids ~= reg_id;
-                            clobber.reg_values ~= reg_val;
+                                // this TRegSet is not clobbered yet
+                                // so we need to add it to the clobber list
+                                clobber.effects ~= InfoNode(InfoType.Register, reg_id, reg_val);
+                            }
                         }
                     }
                 }
@@ -226,8 +226,15 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     auto commit = &trace.commits[i];
                     version (analysis_log)
                         log_commits_walked++;
-                    for (auto j = 0; j < commit.reg_ids.length; j++) {
-                        if (commit.reg_ids[j] == node.data) {
+                    // for (auto j = 0; j < commit.reg_ids.length; j++) {
+                    //     if (commit.reg_ids[j] == node.data) {
+                    //         // the TRegSet id in the commit results is the same as the reg id in the info node we are searching
+                    //         return i;
+                    //     }
+                    // }
+                    for (auto j = 0; j < commit.effects.length; j++) {
+                        auto effect = commit.effects[j];
+                        if (effect.type & InfoType.Register && effect.data == node.data) {
                             // the TRegSet id in the commit results is the same as the reg id in the info node we are searching
                             return i;
                         }
@@ -252,8 +259,15 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     auto commit = &trace.commits[i];
                     version (analysis_log)
                         log_commits_walked++;
-                    for (auto j = 0; j < commit.mem_addrs.length; j++) {
-                        if (commit.mem_addrs[j] == node.data) {
+                    // for (auto j = 0; j < commit.mem_addrs.length; j++) {
+                    //     if (commit.mem_addrs[j] == node.data) {
+                    //         // the memory address in the commit results is the same as the mem addr in the info node we are searching
+                    //         return i;
+                    //     }
+                    // }
+                    for (auto j = 0; j < commit.effects.length; j++) {
+                        auto effect = commit.effects[j];
+                        if (effect.type & InfoType.Memory && effect.data == node.data) {
                             // the memory address in the commit results is the same as the mem addr in the info node we are searching
                             return i;
                         }
@@ -521,9 +535,13 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
             // queue work
             InfoNode[] reg_last_nodes;
-            for (auto clobbered_i = 0; clobbered_i < clobber.reg_ids.length; clobbered_i++) {
-                auto reg_id = clobber.reg_ids[clobbered_i].to!TRegSet;
-                auto reg_val = clobber.reg_values[clobbered_i];
+            auto clobbered_reg_ids = clobber.effects
+                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.data).array;
+            auto clobbered_reg_values = clobber.effects
+                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.value).array;
+            for (auto clobbered_i = 0; clobbered_i < clobbered_reg_ids.length; clobbered_i++) {
+                auto reg_id = clobbered_reg_ids[clobbered_i].to!TRegSet;
+                auto reg_val = clobbered_reg_values[clobbered_i];
 
                 // create an info node for this point
                 auto reg_last_node = InfoNode(InfoType.Register, reg_id, reg_val);
@@ -533,9 +551,13 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // 2. backtrace all clobbered memory
             // queue work
             InfoNode[] mem_last_nodes;
-            for (auto clobbered_i = 0; clobbered_i < clobber.mem_addrs.length; clobbered_i++) {
-                auto mem_addr = clobber.mem_addrs[clobbered_i];
-                auto mem_val = clobber.mem_values[clobbered_i];
+            auto clobbered_mem_addrs = clobber.effects
+                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.data).array;
+            auto clobbered_mem_values = clobber.effects
+                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.value).array;
+            for (auto clobbered_i = 0; clobbered_i < clobbered_mem_addrs.length; clobbered_i++) {
+                auto mem_addr = clobbered_mem_addrs[clobbered_i];
+                auto mem_val = clobbered_mem_values[clobbered_i];
 
                 // create an info node for this point
                 auto mem_last_node = InfoNode(InfoType.Memory, mem_addr, mem_val);
@@ -614,19 +636,28 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // 1. dump clobber commit
             writefln(" clobber (%s commits):", trace.commits.length);
 
+            auto clobbered_reg_ids = clobber.effects
+                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.data).array;
+            auto clobbered_reg_values = clobber.effects
+                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.value).array;
+            auto clobbered_mem_addrs = clobber.effects
+                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.data).array;
+            auto clobbered_mem_values = clobber.effects
+                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.value).array;
+
             // memory
             writefln("  memory:");
-            for (auto i = 0; i < clobber.mem_addrs.length; i++) {
-                auto mem_addr = clobber.mem_addrs[i];
-                auto mem_value = clobber.mem_values[i];
+            for (auto i = 0; i < clobbered_mem_addrs.length; i++) {
+                auto mem_addr = clobbered_mem_addrs[i];
+                auto mem_value = clobbered_mem_values[i];
                 writefln("   mem[$%08x] <- $%02x", mem_addr, mem_value);
             }
 
             // registers
             writefln("  regs:");
-            for (auto i = 0; i < clobber.reg_ids.length; i++) {
-                auto reg_id = clobber.reg_ids[i].to!TRegSet;
-                auto reg_value = clobber.reg_values[i];
+            for (auto i = 0; i < clobbered_reg_ids.length; i++) {
+                auto reg_id = clobbered_reg_ids[i].to!TRegSet;
+                auto reg_value = clobbered_reg_values[i];
                 writefln("   reg %s <- $%08x", reg_id, reg_value);
             }
         }
@@ -701,11 +732,16 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         }
 
         override void dump_summary() {
+            auto clobbered_reg_ids = clobber.effects
+                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.data).array;
+            auto clobbered_mem_addrs = clobber.effects
+                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.data).array;
+
             // summary
             writefln(" summary:");
             writefln("  num commits:            %8d", trace.commits.length);
-            writefln("  registers traced:       %8d", clobber.reg_ids.length);
-            writefln("  memory traced:          %8d", clobber.mem_addrs.length);
+            writefln("  registers traced:       %8d", clobbered_reg_ids.length);
+            writefln("  memory traced:          %8d", clobbered_mem_addrs.length);
             version (analysis_log) {
                 writefln("  found sources:          %8d", log_found_sources);
                 writefln("  walked info:            %8d", log_visited_info_nodes);

@@ -43,9 +43,16 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
                 auto commit = &trace.commits[i];
                 
                 // when searching for a read, we are looking for the reg to be in the dest regs
-                for (auto j = 0; j < commit.reg_ids.length; j++) {
-                    auto scan_reg_id = commit.reg_ids[j];
-                    if (scan_reg_id == reg_id) {
+                // for (auto j = 0; j < commit.reg_ids.length; j++) {
+                //     auto scan_reg_id = commit.reg_ids[j];
+                //     if (scan_reg_id == reg_id) {
+                //         // we found a write
+                //         return i;
+                //     }
+                // }
+                for (auto j = 0; j < commit.effects.length; j++) {
+                    auto effect = commit.effects[j];
+                    if (effect.type & InfoType.Register && effect.data == reg_id) {
                         // we found a write
                         return i;
                     }
