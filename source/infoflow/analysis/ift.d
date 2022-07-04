@@ -2,9 +2,9 @@ module analyzers.ift;
 
 import std.container.dlist;
 import std.typecons;
-import std.array: appender;
+import std.array : appender;
 import infoflow.analysis.common;
-import std.algorithm.iteration: map, filter, fold;
+import std.algorithm.iteration : map, filter, fold;
 
 import infoflow.util;
 
@@ -15,8 +15,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
     alias TBaseAnalysis = BaseAnalysis!(TRegWord, TMemWord, TRegSet);
     mixin(TInfoLog.GenAliases!("TInfoLog"));
 
-    static assert([EnumMembers!TRegSet].map!(x => x.to!string).canFind!(x => x == "PC"),
-        "enum TRegSet must contain a program counter register PC");
+    static assert([EnumMembers!TRegSet].map!(x => x.to!string)
+            .canFind!(x => x == "PC"),
+            "enum TRegSet must contain a program counter register PC");
     enum PC_REGISTER = to!TRegSet("PC");
 
     class IFTTreeNode {
@@ -243,7 +244,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 }
 
                 // if we're here, we've failed
-                mixin(LOG_ERROR!(`format("ERROR: no touching or matching initial found: %s", node)`));
+                mixin(LOG_ERROR!(
+                        `format("ERROR: no touching or matching initial found: %s", node)`));
             } else if (node.type & InfoType.Memory) {
                 // go back through commits until we find one whose results modify this memory
                 for (auto i = from_commit; i >= 0; i--) {
@@ -267,7 +269,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 }
 
                 // if we're here, we've failed
-                mixin(LOG_ERROR!(`format("ERROR: no touching or matching initial found: %s", node)`));
+                mixin(LOG_ERROR!(
+                        `format("ERROR: no touching or matching initial found: %s", node)`));
             } else {
                 assert(0, format("we don't know how to find a last commit touching a node of type %s", node
                         .type));
@@ -304,7 +307,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     log_found_sources++;
             }
 
-            
             Nullable!IFTTreeNode maybe_tree_root;
             if (enable_ift_tree) {
                 // set up the tree
@@ -332,12 +334,14 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 Nullable!IFTTreeNode maybe_curr_tree_node;
                 void update_curr_node_tree_flags() {
-                    if (!enable_ift_tree) return;
+                    if (!enable_ift_tree)
+                        return;
                     maybe_curr_tree_node.get.hierarchy_all_final = curr.node.is_final();
                     maybe_curr_tree_node.get.hierarchy_all_deterministic = curr.node.is_deterministic();
                     maybe_curr_tree_node.get.hierarchy_some_final = curr.node.is_final();
                     maybe_curr_tree_node.get.hierarchy_some_deterministic = curr.node.is_deterministic();
                 }
+
                 if (enable_ift_tree) {
                     // create a tree node for this commit
                     auto curr_tree_node = new IFTTreeNode(curr.owner_commit_ix, curr.node);
@@ -469,7 +473,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                                     // we found a child that has some final
                                     some_children_final = true;
                                 }
-                                if (!some_children_deterministic && root.children[i].hierarchy_some_deterministic) {
+                                if (!some_children_deterministic && root
+                                    .children[i].hierarchy_some_deterministic) {
                                     // we found a child that has some deterministic
                                     some_children_deterministic = true;
                                 }
@@ -478,7 +483,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                                     // we found a child that does not have all final
                                     all_children_final = false;
                                 }
-                                if (all_children_deterministic && !root.children[i].hierarchy_all_deterministic) {
+                                if (all_children_deterministic && !root
+                                    .children[i].hierarchy_all_deterministic) {
                                     // we found a child that does not have all deterministic
                                     all_children_deterministic = false;
                                 }
@@ -496,7 +502,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         tree_po_path.insertFront(root);
 
                         // push children in reverse order
-                        for (auto i = cast(long) (root.children.length) - 1; i >= 0; i--) {
+                        for (auto i = cast(long)(root.children.length) - 1; i >= 0;
+                            i--) {
                             auto child = root.children[i];
                             tree_po_s.insertFront(child);
                         }
@@ -540,16 +547,16 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // assert(0, "log_found_sources should not be called when parallel enabled");
                     return;
                 }
-                
+
                 mixin(LOG_INFO!(
-                    `format(" sources found: %s (~ %.3f KiB)", sources.length,
+                        `format(" sources found: %s (~ %.3f KiB)", sources.length,
                     (sources.length * InfoNode.sizeof) / 1024.0)`));
                 if (enable_ift_tree) {
                     auto last_tree = ift_trees[$ - 1];
                     mixin(LOG_INFO!(
-                        `format(" last tree: %s, (~ %.3f KiB)", last_tree,
+                            `format(" last tree: %s, (~ %.3f KiB)", last_tree,
                         (sources.length * IFTTreeNode.sizeof) / 1024.0)`));
-                        
+
                 }
             }
 
