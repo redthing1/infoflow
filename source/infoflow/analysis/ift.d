@@ -535,15 +535,19 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 mem_last_nodes ~= mem_last_node;
             }
 
+            pragma(inline, true) void log_found_sources(InfoLeaf[] sources) {
+                mixin(LOG_INFO!(
+                    `format(" sources found: %s (~ %.3f KiB)", sources.length,
+                    (sources.length * InfoNode.sizeof) / 1024.0)`));
+            }
+
             pragma(inline, true) void do_reg_trace(InfoNode last_node) {
                 // now start backtracing
                 mixin(LOG_INFO!(
                         `format("backtracking information flow for node: %s", last_node)`));
                 auto reg_sources = backtrace_information_flow(last_node);
 
-                mixin(LOG_INFO!(
-                        `format(" sources for reg %s: %s (~ %.3f KiB)", last_node, reg_sources.length,
-                        (reg_sources.length * InfoNode.sizeof) / 1024.0)`));
+                log_found_sources(reg_sources);
 
                 clobbered_regs_sources[cast(TRegSet) last_node.data] = reg_sources;
             }
@@ -554,9 +558,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         `format("backtracking information flow for node: %s", last_node)`));
                 auto mem_sources = backtrace_information_flow(last_node);
 
-                mixin(LOG_INFO!(
-                        `format(" sources for mem %s: %s (~ %.3f KiB)", last_node, mem_sources.length,
-                        (mem_sources.length * InfoNode.sizeof) / 1024.0)`));
+                log_found_sources(mem_sources);
 
                 clobbered_mem_sources[last_node.data] = mem_sources;
             }
