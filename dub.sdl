@@ -12,3 +12,9 @@ configuration "analysis_log" {
 	versions "analysis_log"
 }
 
+configuration "unittest" {
+	dependency "silly" version="~>1.1.1"
+	targetType "library"
+	sourcePaths "test"
+	importPaths "test"
+}
