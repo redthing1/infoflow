@@ -1,6 +1,9 @@
 module infoflow.models.commit;
 
 import std.algorithm.mutation;
+import std.algorithm.iteration : map, filter, fold;
+import std.array: appender, array;
+import std.range;
 
 template InfoLog(TRegWord, TMemWord, TRegSet) {
     import std.traits;
@@ -220,22 +223,14 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
                 InfoType.CSR: "csr",
             ];
 
-        alias Source = InfoNode;
-
         /// the type of effects this commit has
         InfoType type;
         /// program counter
         TRegWord pc;
-        /// dest reg ids
-        TRegWord[] reg_ids;
-        /// dest reg values
-        TRegWord[] reg_values;
-        /// dest mem addresses
-        TRegWord[] mem_addrs;
-        /// dest mem values
-        TMemWord[] mem_values;
+        /// effects of this commit
+        InfoNode[] effects;
         /// sources for this commit
-        Source[] sources;
+        InfoNode[] sources;
         /// description or comment, usually contains disassembled instruction or other misc info
         string description;
 
@@ -244,24 +239,17 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             return this;
         }
 
-        ref Commit with_dest_regs(TRegWord[] reg_ids, TRegWord[] reg_values) {
-            this.reg_ids = reg_ids;
-            this.reg_values = reg_values;
-            return this;
-        }
-
-        ref Commit with_dest_mem(TRegWord[] mem_addrs, TMemWord[] mem_values) {
-            this.mem_addrs = mem_addrs;
-            this.mem_values = mem_values;
-            return this;
-        }
-
         ref Commit with_pc(TRegWord pc) {
             this.pc = pc;
             return this;
         }
 
-        ref Commit with_sources(Source[] sources) {
+        ref Commit with_effects(InfoNode[] effects) {
+            this.effects = effects;
+            return this;
+        }
+
+        ref Commit with_sources(InfoNode[] sources) {
             this.sources = sources;
             return this;
         }
@@ -269,25 +257,6 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         ref Commit with_description(string description) {
             this.description = description;
             return this;
-        }
-
-        /// converts this commit to info nodes
-        InfoNode[] to_nodes() {
-            InfoNode[] nodes;
-
-            // add a node for each register
-            for (auto i = 0; i < reg_ids.length; i++) {
-                auto node = InfoNode(InfoType.Register, reg_ids[i], reg_values[i]);
-                nodes ~= node;
-            }
-            
-            // add a node for each memory address
-            for (auto i = 0; i < mem_addrs.length; i++) {
-                auto node = InfoNode(InfoType.Memory, mem_addrs[i], mem_values[i]);
-                nodes ~= node;
-            }
-
-            return nodes;
         }
 
         string toString() const {
@@ -305,18 +274,21 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             sb ~= format(" @0x$%08x", pc);
 
             // commit data
-            // auto reg_id_show = reg_id.to!TRegSet;
-            // sb ~= format(" %04s <- $%04x", reg_id_show, reg_value);
-            for (auto i = 0; i < reg_ids.length; i++) {
-                auto reg_id = reg_ids[i];
-                auto reg_value = reg_values[i];
-                auto reg_id_show = reg_id.to!TRegSet;
-                sb ~= format(" %04s <- $%08x", reg_id_show, reg_value);
-            }
-            for (auto i = 0; i < mem_addrs.length; i++) {
-                auto addr = mem_addrs[i];
-                auto value = mem_values[i];
-                sb ~= format(" mem[$%08x] <- %02x", addr, value);
+
+            // commit effects
+            for (auto i = 0; i < effects.length; i++) {
+                auto effect = effects[i];
+                if (effect.type & InfoType.Register) {
+                    auto reg_id = effect.data;
+                    auto reg_value = effect.value;
+                    auto reg_id_show = reg_id.to!TRegSet;
+                    sb ~= format(" %04s <- $%08x", reg_id_show, reg_value);
+                }
+                if (effect.type & InfoType.Memory) {
+                    auto addr = effect.data;
+                    auto value = effect.value;
+                    sb ~= format(" mem[$%08x] <- %02x", addr, value);
+                }
             }
 
             // commit sources
@@ -331,6 +303,26 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             sb ~= format(" (%s)", description);
 
             return sb.array;
+        }
+
+        auto get_effect_reg_ids() {
+            return effects
+                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.data);
+        }
+
+        auto get_effect_reg_values() {
+            return effects
+                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.value);
+        }
+
+        auto get_effect_mem_addrs() {
+            return effects
+                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.data);
+        }
+
+        auto get_effect_mem_values() {
+            return effects
+                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.value);
         }
     }
 
