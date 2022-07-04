@@ -535,10 +535,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
             // queue work
             InfoNode[] reg_last_nodes;
-            auto clobbered_reg_ids = clobber.effects
-                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.data).array;
-            auto clobbered_reg_values = clobber.effects
-                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.value).array;
+            auto clobbered_reg_ids = clobber.get_effect_reg_ids().array;
+            auto clobbered_reg_values = clobber.get_effect_reg_values().array;
             for (auto clobbered_i = 0; clobbered_i < clobbered_reg_ids.length; clobbered_i++) {
                 auto reg_id = clobbered_reg_ids[clobbered_i].to!TRegSet;
                 auto reg_val = clobbered_reg_values[clobbered_i];
@@ -551,10 +549,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // 2. backtrace all clobbered memory
             // queue work
             InfoNode[] mem_last_nodes;
-            auto clobbered_mem_addrs = clobber.effects
-                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.data).array;
-            auto clobbered_mem_values = clobber.effects
-                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.value).array;
+            auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
+            auto clobbered_mem_values = clobber.get_effect_mem_values().array;
             for (auto clobbered_i = 0; clobbered_i < clobbered_mem_addrs.length; clobbered_i++) {
                 auto mem_addr = clobbered_mem_addrs[clobbered_i];
                 auto mem_val = clobbered_mem_values[clobbered_i];
@@ -636,14 +632,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // 1. dump clobber commit
             writefln(" clobber (%s commits):", trace.commits.length);
 
-            auto clobbered_reg_ids = clobber.effects
-                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.data).array;
-            auto clobbered_reg_values = clobber.effects
-                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.value).array;
-            auto clobbered_mem_addrs = clobber.effects
-                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.data).array;
-            auto clobbered_mem_values = clobber.effects
-                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.value).array;
+            auto clobbered_reg_ids = clobber.get_effect_reg_ids().array;
+            auto clobbered_reg_values = clobber.get_effect_reg_values().array;
+            auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
+            auto clobbered_mem_values = clobber.get_effect_mem_values().array;
 
             // memory
             writefln("  memory:");
@@ -732,10 +724,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         }
 
         override void dump_summary() {
-            auto clobbered_reg_ids = clobber.effects
-                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.data).array;
-            auto clobbered_mem_addrs = clobber.effects
-                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.data).array;
+            auto clobbered_reg_ids = clobber.get_effect_reg_ids().array;
+            auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
 
             // summary
             writefln(" summary:");

@@ -2,6 +2,8 @@ module infoflow.models.commit;
 
 import std.algorithm.mutation;
 import std.algorithm.iteration : map, filter, fold;
+import std.array: appender, array;
+import std.range;
 
 template InfoLog(TRegWord, TMemWord, TRegSet) {
     import std.traits;
@@ -301,6 +303,26 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             sb ~= format(" (%s)", description);
 
             return sb.array;
+        }
+
+        auto get_effect_reg_ids() {
+            return effects
+                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.data);
+        }
+
+        auto get_effect_reg_values() {
+            return effects
+                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.value);
+        }
+
+        auto get_effect_mem_addrs() {
+            return effects
+                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.data);
+        }
+
+        auto get_effect_mem_values() {
+            return effects
+                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.value);
         }
     }
 
