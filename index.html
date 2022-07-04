@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+        <link href="./duster_web.css" rel="stylesheet">
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#efe1d5" />
+
+        <meta name="og:site_name" content="InfoFlow" />
+        <meta name="description" content="InfoFlow" />
+
+        <link rel="icon" href="./icon.png">
+
+        <title>InfoFlow</title>
+    </head>
+
+    <body class="ihui-dark">
+        <header>
+        </header>
+        <main>
+            <section class="container center hero">
+                <img width="400" src="media/logo.png" />
+                <!-- <h1 class="slimv">InfoFlow</h1> -->
+                <p class="slimv">
+                    experimental multiarch dynamic binary analysis
+                </p>
+            </section>
+            <section class="container center">
+                <a href="https://github.com/redthing1/infoflow" class="btn">source</a>
+                <a href="https://github.com/redthing1/infoflow/tree/main/doc"
+                    class="btn">docs</a>
+            </section>
+            <section class="container nottoowide">
+                <p dir="auto">infoflow is an experimental framework for <strong>opaque
+                        binary optimization via dynamic analysis</strong>.</p>
+                <p dir="auto">by observing the behavior of a program at runtime
+                    at the architectural level, we can <strong>fully analyze its
+                        computation graph</strong> and provide a suite of
+                    optimizations and introspection.</p>
+                <p dir="auto">infoflow's flagship algorithm is <strong>InfoFlow
+                        IFT</strong>, which traces the flow of abstract
+                    information through a program to fully describe how any
+                    value in the cpu registers or memory was computed, with its
+                    value history and dependency graph. this dependency graph
+                    also allows us to optimize how the value is computed on the
+                    architectural level.</p>
+                <p dir="auto">infoflow is designed to be as <strong>architecture-agnostic</strong>
+                    as possible, to maximize where it can be applied. this is
+                    accomplished with flexible abstractions to avoid duplicating
+                    logic but also retain the ability to make specializations to
+                    a particular architecture when needed.</p>
+            </section>
+        </main>
+    </body>
+
+</html>
