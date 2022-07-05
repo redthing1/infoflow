@@ -149,7 +149,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         Immediate = 1 << 4,
         Combined = Register | Memory | Immediate,
         Device = 1 << 6,
-        CSR = Register | (1 << 7),
+        CSR = (1 << 7),
         MMIO = Memory | Device,
         DeterministicRegister = Register | (1 << 8),
         Reserved2,
@@ -349,12 +349,12 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
 
             mixin(gen_get_for!());
 
-            auto get_effect_reg_ids() { return get_effect_ids_strict(InfoType.Register); }
-            auto get_effect_reg_values() { return get_effect_values_strict(InfoType.Register); }
-            auto get_effect_mem_addrs() { return get_effect_ids_strict(InfoType.Memory); }
-            auto get_effect_mem_values() { return get_effect_values_strict(InfoType.Memory); }
-            auto get_effect_csr_ids() { return get_effect_ids_strict(InfoType.CSR); }
-            auto get_effect_csr_values() { return get_effect_values_strict(InfoType.CSR); }
+            auto get_effect_reg_ids() { return get_effect_ids_all(InfoType.Register); }
+            auto get_effect_reg_values() { return get_effect_values_all(InfoType.Register); }
+            auto get_effect_mem_addrs() { return get_effect_ids_all(InfoType.Memory); }
+            auto get_effect_mem_values() { return get_effect_values_all(InfoType.Memory); }
+            auto get_effect_csr_ids() { return get_effect_ids_all(InfoType.CSR); }
+            auto get_effect_csr_values() { return get_effect_values_all(InfoType.CSR); }
         }
     }
 
