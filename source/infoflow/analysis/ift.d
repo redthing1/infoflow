@@ -675,6 +675,11 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // registers
             foreach (reg_id; clobbered_regs_sources.byKey) {
                 writefln("  reg %s:", reg_id);
+                if (reg_id !in clobbered_regs_sources) {
+                    // ???
+                    mixin(LOG_ERROR!(`format("  reg %s not in clobbered_regs_sources", reg_id)`));
+                    assert(0, "reg not in clobbered_regs_sources");
+                }
                 foreach (source; clobbered_regs_sources[reg_id]) {
                     log_commit_for_source(source);
                 }
@@ -683,6 +688,11 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // memory
             foreach (mem_addr; clobbered_mem_sources.byKey) {
                 writefln("  mem[%04x]:", mem_addr);
+                if (mem_addr !in clobbered_mem_sources) {
+                    // ???
+                    mixin(LOG_ERROR!(`format("  mem[%04x] not in clobbered_mem_sources", mem_addr)`));
+                    assert(0, "mem not in clobbered_mem_sources");
+                }
                 foreach (source; clobbered_mem_sources[mem_addr]) {
                     log_commit_for_source(source);
                 }
