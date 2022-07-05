@@ -166,6 +166,16 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 }
             }
 
+            if (included_data & IFTDataType.CSR) {
+                foreach (csr_id; snap_init.csr.byKey) {
+                    if (snap_init.get_csr(csr_id) != snap_final.get_csr(csr_id)) {
+                        // this CSR changed between the initial and final state
+                        // store commit that clobbers this CSR
+                        clobber.effects ~= InfoNode(InfoType.CSR, csr_id, snap_final.get_csr(csr_id));
+                    }
+                }
+            }
+
             // 3. do a reverse pass through all commits, looking for special cases
             //    things like devices and mmio, external sources of data
 
@@ -640,20 +650,37 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
             auto clobbered_mem_values = clobber.get_effect_mem_values().array;
 
-            // memory
-            writefln("  memory:");
-            for (auto i = 0; i < clobbered_mem_addrs.length; i++) {
-                auto mem_addr = clobbered_mem_addrs[i];
-                auto mem_value = clobbered_mem_values[i];
-                writefln("   mem[$%08x] <- $%02x", mem_addr, mem_value);
+            if (included_data & IFTDataType.Memory) {
+                // memory
+                writefln("  memory:");
+                for (auto i = 0; i < clobbered_mem_addrs.length; i++) {
+                    auto mem_addr = clobbered_mem_addrs[i];
+                    auto mem_value = clobbered_mem_values[i];
+                    writefln("   mem[$%08x] <- $%02x", mem_addr, mem_value);
+                }
             }
 
-            // registers
-            writefln("  regs:");
-            for (auto i = 0; i < clobbered_reg_ids.length; i++) {
-                auto reg_id = clobbered_reg_ids[i].to!TRegSet;
-                auto reg_value = clobbered_reg_values[i];
-                writefln("   reg %s <- $%08x", reg_id, reg_value);
+            if (included_data & IFTDataType.Registers) {
+                // registers
+                writefln("  regs:");
+                for (auto i = 0; i < clobbered_reg_ids.length; i++) {
+                    auto reg_id = clobbered_reg_ids[i].to!TRegSet;
+                    auto reg_value = clobbered_reg_values[i];
+                    writefln("   reg %s <- $%08x", reg_id, reg_value);
+                }
+            }
+
+            if (included_data & IFTDataType.CSR) {
+                // csr
+                writefln("  csr:");
+                auto clobbered_csr_ids = clobber.get_effect_ids_for(InfoType.CSR).array;
+                auto clobbered_csr_values = clobber.get_effect_values_for(InfoType.CSR).array;
+
+                for (auto i = 0; i < clobbered_csr_ids.length; i++) {
+                    auto csr_id = clobbered_csr_ids[i];
+                    auto csr_value = clobbered_csr_values[i];
+                    writefln("   csr %s <- $%08x", csr_id, csr_value);
+                }
             }
 
             auto total_clobber_nodes = clobbered_reg_ids.length + clobbered_mem_addrs.length;
