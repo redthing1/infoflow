@@ -353,6 +353,8 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             auto get_effect_reg_values() { return get_effect_values_strict(InfoType.Register); }
             auto get_effect_mem_addrs() { return get_effect_ids_strict(InfoType.Memory); }
             auto get_effect_mem_values() { return get_effect_values_strict(InfoType.Memory); }
+            auto get_effect_csr_ids() { return get_effect_ids_strict(InfoType.CSR); }
+            auto get_effect_csr_values() { return get_effect_values_strict(InfoType.CSR); }
         }
     }
 

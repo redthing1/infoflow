@@ -78,6 +78,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         Commit clobber;
         InfoLeafs[TRegSet] clobbered_regs_sources;
         InfoLeafs[TRegWord] clobbered_mem_sources;
+        InfoLeafs[TRegWord] clobbered_csr_sources;
         IFTDataType included_data = IFTDataType.Standard;
         IFTTreeNode[] ift_trees;
         bool enable_ift_tree = false;
@@ -545,7 +546,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             import std.parallelism;
 
             // 1. backtrace all clobbered registers
-
             // queue work
             InfoNode[] reg_last_nodes;
             auto clobbered_reg_ids = clobber.get_effect_reg_ids().array;
@@ -571,6 +571,19 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 // create an info node for this point
                 auto mem_last_node = InfoNode(InfoType.Memory, mem_addr, mem_val);
                 mem_last_nodes ~= mem_last_node;
+            }
+
+            // 3. backtrace all clobbered csrs
+            // queue work
+            auto clobbered_csr_ids = clobber.get_effect_csr_ids().array;
+            auto clobbered_csr_values = clobber.get_effect_csr_values().array;
+            for (auto clobbered_i = 0; clobbered_i < clobbered_csr_ids.length; clobbered_i++) {
+                auto csr_id = clobbered_csr_ids[clobbered_i];
+                auto csr_val = clobbered_csr_values[clobbered_i];
+
+                // create an info node for this point
+                auto csr_last_node = InfoNode(InfoType.CSR, csr_id, csr_val);
+                reg_last_nodes ~= csr_last_node;
             }
 
             pragma(inline, true) void log_found_sources(InfoLeaf[] sources) {
@@ -613,6 +626,15 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 clobbered_mem_sources[last_node.data] = mem_sources;
             }
 
+            pragma(inline, true) void do_csr_trace(InfoNode last_node) {
+                // now start backtracing
+                mixin(LOG_INFO!(
+                        `format("backtracking information flow for node: %s", last_node)`));
+                auto csr_sources = backtrace_information_flow(last_node);
+                log_found_sources(csr_sources);
+                clobbered_csr_sources[last_node.data] = csr_sources;
+            }
+
             // select serial/parallel task
             // do work
 
@@ -639,6 +661,18 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     do_mem_trace(last_node);
                 }
             }
+
+            if (analysis_parallelized) {
+                auto csr_last_nodes_work = parallel(reg_last_nodes);
+                foreach (last_node; csr_last_nodes_work) {
+                    do_csr_trace(last_node);
+                }
+            } else {
+                auto csr_last_nodes_work = reg_last_nodes;
+                foreach (last_node; csr_last_nodes_work) {
+                    do_csr_trace(last_node);
+                }
+            }
         }
 
         void dump_clobber() {
@@ -649,6 +683,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             auto clobbered_reg_values = clobber.get_effect_reg_values().array;
             auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
             auto clobbered_mem_values = clobber.get_effect_mem_values().array;
+            auto clobbered_csr_ids = clobber.get_effect_csr_ids().array;
+            auto clobbered_csr_values = clobber.get_effect_csr_values().array;
 
             if (included_data & IFTDataType.Memory) {
                 // memory
@@ -673,17 +709,15 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             if (included_data & IFTDataType.CSR) {
                 // csr
                 writefln("  csr:");
-                // auto clobbered_csr_ids = clobber.get_effect_ids_for(InfoType.CSR).array;
-                // auto clobbered_csr_values = clobber.get_effect_values_for(InfoType.CSR).array;
-
-                // for (auto i = 0; i < clobbered_csr_ids.length; i++) {
-                //     auto csr_id = clobbered_csr_ids[i];
-                //     auto csr_value = clobbered_csr_values[i];
-                //     writefln("   csr $%08x <- $%08x", csr_id, csr_value);
-                // }
+                for (auto i = 0; i < clobbered_csr_ids.length; i++) {
+                    auto csr_id = clobbered_csr_ids[i];
+                    auto csr_value = clobbered_csr_values[i];
+                    writefln("   csr $%08x <- $%08x", csr_id, csr_value);
+                }
             }
 
-            auto total_clobber_nodes = clobbered_reg_ids.length + clobbered_mem_addrs.length;
+            auto total_clobber_nodes =
+                clobbered_reg_ids.length + clobbered_mem_addrs.length + clobbered_csr_ids.length;
             writefln("  total clobbered nodes: %s", total_clobber_nodes);
         }
 
@@ -730,6 +764,19 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 }
             }
 
+            // csr
+            foreach (csr_id; clobbered_csr_sources.byKey) {
+                writefln("  csr $%08x:", csr_id);
+                if (csr_id !in clobbered_csr_sources) {
+                    // ???
+                    mixin(LOG_ERROR!(`format("  csr $%08x not in clobbered_csr_sources", csr_id)`));
+                    assert(0, "csr not in clobbered_csr_sources");
+                }
+                foreach (source; clobbered_csr_sources[csr_id]) {
+                    log_commit_for_source(source);
+                }
+            }
+
             if (enable_ift_tree) {
                 // also dump ift tree
                 writefln(" ift tree:");
@@ -769,12 +816,14 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         override void dump_summary() {
             auto clobbered_reg_ids = clobber.get_effect_reg_ids().array;
             auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
+            auto clobered_csr_ids = clobber.get_effect_csr_ids().array;
 
             // summary
             writefln(" summary:");
             writefln("  num commits:            %8d", trace.commits.length);
             writefln("  registers traced:       %8d", clobbered_reg_ids.length);
             writefln("  memory traced:          %8d", clobbered_mem_addrs.length);
+            writefln("  csr traced:             %8d", clobered_csr_ids.length);
             version (analysis_log) {
                 writefln("  found sources:          %8d", log_found_sources);
                 writefln("  walked info:            %8d", log_visited_info_nodes);
