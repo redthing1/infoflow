@@ -5,6 +5,7 @@ import std.typecons;
 import std.array : appender, array;
 import infoflow.analysis.common;
 import std.algorithm.iteration : map, filter, fold;
+import core.atomic: atomicOp;
 
 import infoflow.util;
 
@@ -111,7 +112,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         override void analyze() {
             MonoTime tmr_start = MonoTime.currTime;
 
-            version (analysis_log) synchronized {
+            version (analysis_log) {
                 log_visited_info_nodes = 0;
                 log_commits_walked = 0;
                 log_found_sources = 0;
@@ -168,9 +169,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
             for (auto i = last_commit_ix; i >= 0; i--) {
                 auto commit = trace.commits[i];
-                version (analysis_log) synchronized {
-                    log_commits_walked++;
-                }
+                version (analysis_log)
+                    atomicOp!"+="(this.log_commits_walked, 1);
 
                 // look at sources of this commit
                 for (auto j = 0; j < commit.sources.length; j++) {
@@ -210,9 +210,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         long find_last_commit_at_pc(TRegWord pc_val, long from_commit) {
             for (auto i = from_commit; i >= 0; i--) {
                 auto commit = &trace.commits[i];
-                version (analysis_log) synchronized {
-                    log_commits_walked++;
-                }
+                version (analysis_log)
+                    atomicOp!"+="(this.log_commits_walked, 1);
                 if (commit.pc == pc_val) {
                     return i;
                 }
@@ -227,7 +226,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 for (auto i = from_commit; i >= 0; i--) {
                     auto commit = &trace.commits[i];
                     version (analysis_log)
-                        log_commits_walked++;
+                        atomicOp!"+="(this.log_commits_walked, 1);
                     // for (auto j = 0; j < commit.reg_ids.length; j++) {
                     //     if (commit.reg_ids[j] == node.data) {
                     //         // the TRegSet id in the commit results is the same as the reg id in the info node we are searching
@@ -259,9 +258,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 // go back through commits until we find one whose results modify this memory
                 for (auto i = from_commit; i >= 0; i--) {
                     auto commit = &trace.commits[i];
-                    version (analysis_log) synchronized {
-                        log_commits_walked++;
-                    }
+                    version (analysis_log)
+                        atomicOp!"+="(this.log_commits_walked, 1);
                     // for (auto j = 0; j < commit.mem_addrs.length; j++) {
                     //     if (commit.mem_addrs[j] == node.data) {
                     //         // the memory address in the commit results is the same as the mem addr in the info node we are searching
@@ -320,9 +318,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
             pragma(inline, true) void add_info_leaf(InfoLeaf leaf) {
                 terminal_leaves ~= leaf;
-                version (analysis_log) synchronized {
-                    log_found_sources++;
-                }
+                version (analysis_log)
+                    atomicOp!"+="(this.log_found_sources, 1);
             }
 
             Nullable!IFTTreeNode maybe_tree_root;
@@ -347,9 +344,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 mixin(LOG_TRACE!(
                         `format("  visiting: node: %s (#%s), walk: %s", curr.node, curr.owner_commit_ix, curr.walk_commit_ix)`));
-                version (analysis_log) synchronized {
-                    log_visited_info_nodes += 1;
-                }
+                version (analysis_log)
+                    atomicOp!"+="(this.log_visited_info_nodes, 1);
 
                 Nullable!IFTTreeNode maybe_curr_tree_node;
                 void update_curr_node_tree_flags() {
@@ -737,7 +733,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             writefln("  num commits:            %8d", trace.commits.length);
             writefln("  registers traced:       %8d", clobbered_reg_ids.length);
             writefln("  memory traced:          %8d", clobbered_mem_addrs.length);
-            version (analysis_log) synchronized {
+            version (analysis_log) {
                 writefln("  found sources:          %8d", log_found_sources);
                 writefln("  walked info:            %8d", log_visited_info_nodes);
                 writefln("  walked commits:         %8d", log_commits_walked);
