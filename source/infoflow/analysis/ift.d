@@ -842,9 +842,15 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // summary
             writefln(" summary:");
             writefln("  num commits:            %8d", trace.commits.length);
-            writefln("  registers traced:       %8d", clobbered_reg_ids.length);
-            writefln("  memory traced:          %8d", clobbered_mem_addrs.length);
-            writefln("  csr traced:             %8d", clobered_csr_ids.length);
+            if (included_data & IFTDataType.Registers) {
+                writefln("  registers traced:       %8d", clobbered_reg_ids.length);
+            }
+            if (included_data & IFTDataType.Memory) {
+                writefln("  memory traced:          %8d", clobbered_mem_addrs.length);
+            }
+            if (included_data & IFTDataType.CSR) {
+                writefln("  csr traced:             %8d", clobered_csr_ids.length);
+            }
             version (analysis_log) {
                 writefln("  found sources:          %8d", log_found_sources);
                 writefln("  walked info:            %8d", log_visited_info_nodes);
