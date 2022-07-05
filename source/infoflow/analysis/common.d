@@ -41,13 +41,5 @@ template BaseAnalysis(TRegWord, TMemWord, TRegSet) {
         void analyze() {
             assert(0, "analyze() not implemented");
         }
-
-        void dump_analysis() {
-            assert(0, "dump_analysis() not implemented");
-        }
-
-        void dump_summary() {
-            assert(0, "dump_summary() not implemented");
-        }
     }
 }
