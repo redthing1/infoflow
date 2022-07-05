@@ -82,9 +82,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         bool enable_ift_tree = false;
 
         version (analysis_log) {
-            long log_visited_info_nodes;
-            long log_commits_walked;
-            long log_found_sources;
+            shared long log_visited_info_nodes;
+            shared long log_commits_walked;
+            shared long log_found_sources;
         }
         ulong log_analysis_time;
 
@@ -111,7 +111,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         override void analyze() {
             MonoTime tmr_start = MonoTime.currTime;
 
-            version (analysis_log) {
+            version (analysis_log) synchronized {
                 log_visited_info_nodes = 0;
                 log_commits_walked = 0;
                 log_found_sources = 0;
@@ -168,8 +168,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
             for (auto i = last_commit_ix; i >= 0; i--) {
                 auto commit = trace.commits[i];
-                version (analysis_log)
+                version (analysis_log) synchronized {
                     log_commits_walked++;
+                }
 
                 // look at sources of this commit
                 for (auto j = 0; j < commit.sources.length; j++) {
@@ -209,8 +210,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         long find_last_commit_at_pc(TRegWord pc_val, long from_commit) {
             for (auto i = from_commit; i >= 0; i--) {
                 auto commit = &trace.commits[i];
-                version (analysis_log)
+                version (analysis_log) synchronized {
                     log_commits_walked++;
+                }
                 if (commit.pc == pc_val) {
                     return i;
                 }
@@ -257,8 +259,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 // go back through commits until we find one whose results modify this memory
                 for (auto i = from_commit; i >= 0; i--) {
                     auto commit = &trace.commits[i];
-                    version (analysis_log)
+                    version (analysis_log) synchronized {
                         log_commits_walked++;
+                    }
                     // for (auto j = 0; j < commit.mem_addrs.length; j++) {
                     //     if (commit.mem_addrs[j] == node.data) {
                     //         // the memory address in the commit results is the same as the mem addr in the info node we are searching
@@ -317,8 +320,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
             pragma(inline, true) void add_info_leaf(InfoLeaf leaf) {
                 terminal_leaves ~= leaf;
-                version (analysis_log)
+                version (analysis_log) synchronized {
                     log_found_sources++;
+                }
             }
 
             Nullable!IFTTreeNode maybe_tree_root;
@@ -343,8 +347,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 mixin(LOG_TRACE!(
                         `format("  visiting: node: %s (#%s), walk: %s", curr.node, curr.owner_commit_ix, curr.walk_commit_ix)`));
-                version (analysis_log)
+                version (analysis_log) synchronized {
                     log_visited_info_nodes += 1;
+                }
 
                 Nullable!IFTTreeNode maybe_curr_tree_node;
                 void update_curr_node_tree_flags() {
@@ -732,7 +737,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             writefln("  num commits:            %8d", trace.commits.length);
             writefln("  registers traced:       %8d", clobbered_reg_ids.length);
             writefln("  memory traced:          %8d", clobbered_mem_addrs.length);
-            version (analysis_log) {
+            version (analysis_log) synchronized {
                 writefln("  found sources:          %8d", log_found_sources);
                 writefln("  walked info:            %8d", log_visited_info_nodes);
                 writefln("  walked commits:         %8d", log_commits_walked);
