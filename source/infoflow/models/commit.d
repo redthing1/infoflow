@@ -317,24 +317,42 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             return sb.array;
         }
 
-        auto get_effect_reg_ids() {
-            return effects
-                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.data);
-        }
+        pragma(inline, true) {
+            auto get_effect_ids_for(InfoType type) {
+                return effects
+                    .filter!(x => (x.type & type) > 0).map!(x => x.data);
+            }
 
-        auto get_effect_reg_values() {
-            return effects
-                .filter!(x => (x.type & InfoType.Register) > 0).map!(x => x.value);
-        }
+            auto get_effect_values_for(InfoType type) {
+                return effects
+                    .filter!(x => (x.type & type) > 0).map!(x => x.value);
+            }
 
-        auto get_effect_mem_addrs() {
-            return effects
-                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.data);
-        }
+            auto get_source_ids_for(InfoType type) {
+                return sources
+                    .filter!(x => (x.type & type) > 0).map!(x => x.data);
+            }
 
-        auto get_effect_mem_values() {
-            return effects
-                .filter!(x => (x.type & InfoType.Memory) > 0).map!(x => x.value);
+            auto get_source_values_for(InfoType type) {
+                return sources
+                    .filter!(x => (x.type & type) > 0).map!(x => x.value);
+            }
+
+            auto get_effect_reg_ids() {
+                return get_effect_ids_for(InfoType.Register);
+            }
+
+            auto get_effect_reg_values() {
+                return get_effect_values_for(InfoType.Register);
+            }
+
+            auto get_effect_mem_addrs() {
+                return get_effect_ids_for(InfoType.Memory);
+            }
+
+            auto get_effect_mem_values() {
+                return get_effect_values_for(InfoType.Memory);
+            }
         }
     }
 
