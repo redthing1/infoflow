@@ -673,14 +673,14 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             if (included_data & IFTDataType.CSR) {
                 // csr
                 writefln("  csr:");
-                auto clobbered_csr_ids = clobber.get_effect_ids_for(InfoType.CSR).array;
-                auto clobbered_csr_values = clobber.get_effect_values_for(InfoType.CSR).array;
+                // auto clobbered_csr_ids = clobber.get_effect_ids_for(InfoType.CSR).array;
+                // auto clobbered_csr_values = clobber.get_effect_values_for(InfoType.CSR).array;
 
-                for (auto i = 0; i < clobbered_csr_ids.length; i++) {
-                    auto csr_id = clobbered_csr_ids[i];
-                    auto csr_value = clobbered_csr_values[i];
-                    writefln("   csr %s <- $%08x", csr_id, csr_value);
-                }
+                // for (auto i = 0; i < clobbered_csr_ids.length; i++) {
+                //     auto csr_id = clobbered_csr_ids[i];
+                //     auto csr_value = clobbered_csr_values[i];
+                //     writefln("   csr $%08x <- $%08x", csr_id, csr_value);
+                // }
             }
 
             auto total_clobber_nodes = clobbered_reg_ids.length + clobbered_mem_addrs.length;

@@ -318,41 +318,41 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         }
 
         pragma(inline, true) {
-            auto get_effect_ids_for(InfoType type) {
-                return effects
-                    .filter!(x => (x.type & type) > 0).map!(x => x.data);
+            private static string gen_get_for()() {
+                import std.format;
+
+                auto sb = appender!string;
+                
+                enum FIELDS = ["source": "sources", "effect": "effects"];
+                enum NODE_ITEMS = ["ids": "data", "values": "value"];
+
+                enum strict_comparator = "x => (x.type == type)";
+                enum loose_comparator = "x => (x.type & type) > 0";
+                enum COMPARATORS = ["_strict": strict_comparator, "_all": loose_comparator];
+
+                static foreach (field_key, field_val; FIELDS) {
+                    foreach (node_item_key, node_item_val; NODE_ITEMS) {
+                        foreach (comparator_key, comparator_val; COMPARATORS) {
+                            auto func_name = format("get_%s_%s%s", field_key, node_item_key, comparator_key);
+                            sb ~= format(`
+                                auto %s(InfoType type) {
+                                    return %s.filter!(%s).map!(x => x.%s);
+                                }
+                            `, func_name, field_val, comparator_val, node_item_val
+                            );
+                        }
+                    }
+                }
+
+                return sb.data;
             }
 
-            auto get_effect_values_for(InfoType type) {
-                return effects
-                    .filter!(x => (x.type & type) > 0).map!(x => x.value);
-            }
+            mixin(gen_get_for!());
 
-            auto get_source_ids_for(InfoType type) {
-                return sources
-                    .filter!(x => (x.type & type) > 0).map!(x => x.data);
-            }
-
-            auto get_source_values_for(InfoType type) {
-                return sources
-                    .filter!(x => (x.type & type) > 0).map!(x => x.value);
-            }
-
-            auto get_effect_reg_ids() {
-                return get_effect_ids_for(InfoType.Register);
-            }
-
-            auto get_effect_reg_values() {
-                return get_effect_values_for(InfoType.Register);
-            }
-
-            auto get_effect_mem_addrs() {
-                return get_effect_ids_for(InfoType.Memory);
-            }
-
-            auto get_effect_mem_values() {
-                return get_effect_values_for(InfoType.Memory);
-            }
+            auto get_effect_reg_ids() { return get_effect_ids_strict(InfoType.Register); }
+            auto get_effect_reg_values() { return get_effect_values_strict(InfoType.Register); }
+            auto get_effect_mem_addrs() { return get_effect_ids_strict(InfoType.Memory); }
+            auto get_effect_mem_values() { return get_effect_values_strict(InfoType.Memory); }
         }
     }
 
