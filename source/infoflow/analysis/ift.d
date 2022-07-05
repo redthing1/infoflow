@@ -78,7 +78,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         Commit clobber;
         InfoLeafs[TRegSet] clobbered_regs_sources;
         InfoLeafs[TRegWord] clobbered_mem_sources;
-        IFTDataType included_data = IFTDataType.All;
+        IFTDataType included_data = IFTDataType.Standard;
         IFTTreeNode[] ift_trees;
         bool enable_ift_tree = false;
 
@@ -93,8 +93,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             None = (0 << 0),
             Registers = (1 << 0),
             Memory = (1 << 1),
-            Special = (1 << 2),
-            All = (Registers | Memory | Special),
+            CSR = (1 << 3),
+            Standard = (Registers | Memory),
+            Special = (CSR),
+            All = (Standard | Special),
         }
 
         this(CommitTrace commit_trace, bool parallelized = false) {
