@@ -185,12 +185,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     auto commit = &trace.commits[i];
                     version (analysis_log)
                         atomicOp!"+="(this.log_commits_walked, 1);
-                    // for (auto j = 0; j < commit.reg_ids.length; j++) {
-                    //     if (commit.reg_ids[j] == node.data) {
-                    //         // the TRegSet id in the commit results is the same as the reg id in the info node we are searching
-                    //         return i;
-                    //     }
-                    // }
                     for (auto j = 0; j < commit.effects.length; j++) {
                         auto effect = commit.effects[j];
                         if (effect.type & InfoType.Register && effect.data == node.data) {
@@ -218,12 +212,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     auto commit = &trace.commits[i];
                     version (analysis_log)
                         atomicOp!"+="(this.log_commits_walked, 1);
-                    // for (auto j = 0; j < commit.mem_addrs.length; j++) {
-                    //     if (commit.mem_addrs[j] == node.data) {
-                    //         // the memory address in the commit results is the same as the mem addr in the info node we are searching
-                    //         return i;
-                    //     }
-                    // }
                     for (auto j = 0; j < commit.effects.length; j++) {
                         auto effect = commit.effects[j];
                         if (effect.type & InfoType.Memory && effect.data == node.data) {
@@ -254,7 +242,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     for (auto j = 0; j < commit.effects.length; j++) {
                         auto effect = commit.effects[j];
                         if (effect.type & InfoType.CSR && effect.data == node.data) {
-                            // the CSR id in the commit results is the same as the csr id in the info node we are searching
                             return i;
                         }
                     }
