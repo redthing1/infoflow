@@ -299,6 +299,27 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 // if we're here, we've failed
                 mixin(LOG_ERROR!(
                         `format("ERROR: no touching or matching initial found: %s", node)`));
+            } else if (node.type & InfoType.CSR) {
+                // go back through commits until we find one whose results modify this CSR
+                for (auto i = from_commit; i >= 0; i--) {
+                    auto commit = &trace.commits[i];
+                    version (analysis_log)
+                        atomicOp!"+="(this.log_commits_walked, 1);
+                    
+                    for (auto j = 0; j < commit.effects.length; j++) {
+                        auto effect = commit.effects[j];
+                        if (effect.type & InfoType.CSR && effect.data == node.data) {
+                            // the CSR id in the commit results is the same as the csr id in the info node we are searching
+                            return i;
+                        }
+                    }
+                }
+                if (snap_init.get_csr(node.data) == node.value) {
+                    return -1;
+                }
+                // if we're here, we've failed
+                mixin(LOG_ERROR!(
+                        `format("ERROR: no touching or matching initial found: %s", node)`));
             } else {
                 assert(0, format("we don't know how to find a last commit touching a node of type %s", node
                         .type));
