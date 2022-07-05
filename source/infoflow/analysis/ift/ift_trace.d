@@ -429,70 +429,74 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             if (enable_ift_tree) {
-                // now do a post order traversal of the tree
-                auto tree_po_s = DList!IFTTreeNode();
-                auto tree_po_path = DList!IFTTreeNode();
-
-                tree_po_s.insertFront(maybe_tree_root.get); // push root onto stack
-                while (!tree_po_s.empty) {
-                    auto root = tree_po_s.front;
-
-                    if (!tree_po_path.empty && tree_po_path.front == root) {
-                        // both are equal, so we can pop from both
-
-                        if (root.children.length > 0) {
-                            // this is an inner node, update hierarchy final/deterministic flags
-
-                            auto all_children_final = true;
-                            auto all_children_deterministic = true;
-
-                            auto some_children_final = false;
-                            auto some_children_deterministic = false;
-
-                            for (auto i = 0; i < root.children.length; i++) {
-                                if (!some_children_final && root.children[i].hierarchy_some_final) {
-                                    // we found a child that has some final
-                                    some_children_final = true;
-                                }
-                                if (!some_children_deterministic && root
-                                    .children[i].hierarchy_some_deterministic) {
-                                    // we found a child that has some deterministic
-                                    some_children_deterministic = true;
-                                }
-
-                                if (all_children_final && !root.children[i].hierarchy_all_final) {
-                                    // we found a child that does not have all final
-                                    all_children_final = false;
-                                }
-                                if (all_children_deterministic && !root
-                                    .children[i].hierarchy_all_deterministic) {
-                                    // we found a child that does not have all deterministic
-                                    all_children_deterministic = false;
-                                }
-                            }
-                            root.hierarchy_some_final = some_children_final;
-                            root.hierarchy_some_deterministic = some_children_deterministic;
-                            root.hierarchy_all_final = all_children_final;
-                            root.hierarchy_all_deterministic = all_children_deterministic;
-                        }
-
-                        tree_po_s.removeFront();
-                        tree_po_path.removeFront();
-                    } else {
-                        // push onto path
-                        tree_po_path.insertFront(root);
-
-                        // push children in reverse order
-                        for (auto i = cast(long)(root.children.length) - 1; i >= 0;
-                            i--) {
-                            auto child = root.children[i];
-                            tree_po_s.insertFront(child);
-                        }
-                    }
-                }
+                analyze_tree_children(maybe_tree_root.get);
             }
 
             return terminal_leaves.data;
+        }
+
+        void analyze_tree_children(IFTTreeNode tree_root) {
+            // now do a post order traversal of the tree
+            auto tree_po_s = DList!IFTTreeNode();
+            auto tree_po_path = DList!IFTTreeNode();
+
+            tree_po_s.insertFront(tree_root); // push root onto stack
+            while (!tree_po_s.empty) {
+                auto root = tree_po_s.front;
+
+                if (!tree_po_path.empty && tree_po_path.front == root) {
+                    // both are equal, so we can pop from both
+
+                    if (root.children.length > 0) {
+                        // this is an inner node, update hierarchy final/deterministic flags
+
+                        auto all_children_final = true;
+                        auto all_children_deterministic = true;
+
+                        auto some_children_final = false;
+                        auto some_children_deterministic = false;
+
+                        for (auto i = 0; i < root.children.length; i++) {
+                            if (!some_children_final && root.children[i].hierarchy_some_final) {
+                                // we found a child that has some final
+                                some_children_final = true;
+                            }
+                            if (!some_children_deterministic && root
+                                .children[i].hierarchy_some_deterministic) {
+                                // we found a child that has some deterministic
+                                some_children_deterministic = true;
+                            }
+
+                            if (all_children_final && !root.children[i].hierarchy_all_final) {
+                                // we found a child that does not have all final
+                                all_children_final = false;
+                            }
+                            if (all_children_deterministic && !root
+                                .children[i].hierarchy_all_deterministic) {
+                                // we found a child that does not have all deterministic
+                                all_children_deterministic = false;
+                            }
+                        }
+                        root.hierarchy_some_final = some_children_final;
+                        root.hierarchy_some_deterministic = some_children_deterministic;
+                        root.hierarchy_all_final = all_children_final;
+                        root.hierarchy_all_deterministic = all_children_deterministic;
+                    }
+
+                    tree_po_s.removeFront();
+                    tree_po_path.removeFront();
+                } else {
+                    // push onto path
+                    tree_po_path.insertFront(root);
+
+                    // push children in reverse order
+                    for (auto i = cast(long)(root.children.length) - 1; i >= 0;
+                        i--) {
+                        auto child = root.children[i];
+                        tree_po_s.insertFront(child);
+                    }
+                }
+            }
         }
 
         void analyze_flows() {
