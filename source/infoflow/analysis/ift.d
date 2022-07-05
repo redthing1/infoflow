@@ -653,6 +653,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 auto reg_value = clobbered_reg_values[i];
                 writefln("   reg %s <- $%08x", reg_id, reg_value);
             }
+
+            auto total_clobber_nodes = clobbered_reg_ids.length + clobbered_mem_addrs.length;
+            writefln("  total clobbered nodes: %s", total_clobber_nodes);
         }
 
         override void dump_analysis() {
