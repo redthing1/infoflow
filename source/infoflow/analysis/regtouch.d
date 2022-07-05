@@ -65,10 +65,10 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
         override void analyze() {
         }
 
-        override void dump_analysis() {
+        void dump_analysis() {
         }
 
-        override void dump_summary() {
+        void dump_summary() {
         }
     }
 }
