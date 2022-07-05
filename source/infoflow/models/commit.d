@@ -94,6 +94,8 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         public MemoryMap[] memory_map;
         /// memory page table populated with all memory data
         public MemoryPageTable tracked_mem;
+        /// all csr and their values
+        public TRegWord[TRegWord] csr;
 
         /// get the value of a register
         public TRegWord get_reg(ulong id) {
@@ -130,6 +132,11 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
 
             assert(0, format("no memory map entry found for address: %s", addr));
             // return MemoryMap.Type.Unknown;
+        }
+
+        /// get the value of a csr
+        public TRegWord get_csr(TRegWord addr) {
+            return csr[addr];
         }
     }
 
@@ -278,16 +285,21 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             // commit effects
             for (auto i = 0; i < effects.length; i++) {
                 auto effect = effects[i];
-                if (effect.type & InfoType.Register) {
+                if (effect.type == InfoType.Register) {
                     auto reg_id = effect.data;
                     auto reg_value = effect.value;
                     auto reg_id_show = reg_id.to!TRegSet;
                     sb ~= format(" %04s <- $%08x", reg_id_show, reg_value);
                 }
-                if (effect.type & InfoType.Memory) {
+                if (effect.type == InfoType.Memory) {
                     auto addr = effect.data;
                     auto value = effect.value;
                     sb ~= format(" mem[$%08x] <- %02x", addr, value);
+                }
+                if (effect.type == InfoType.CSR) {
+                    auto csr_id = effect.data;
+                    auto csr_value = effect.value;
+                    sb ~= format(" csr#%02x <- $%08x", csr_id, csr_value);
                 }
             }
 
