@@ -260,6 +260,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         }
 
         InfoLeaf[] backtrace_information_flow(InfoNode last_node) {
+            mixin(LOG_INFO!(`format("backtracking information flow for node: %s", last_node)`));
+
             // 1. get the commit corresponding to this node
             auto last_node_last_touch_ix =
                 find_commit_last_touching(last_node, last_commit_ix);
@@ -532,6 +534,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
             // 3. backtrace all clobbered csrs
             // queue work
+            InfoNode[] csr_last_nodes;
             auto clobbered_csr_ids = clobber.get_effect_csr_ids().array;
             auto clobbered_csr_values = clobber.get_effect_csr_values().array;
             for (auto clobbered_i = 0; clobbered_i < clobbered_csr_ids.length; clobbered_i++) {
@@ -540,7 +543,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 // create an info node for this point
                 auto csr_last_node = InfoNode(InfoType.CSR, csr_id, csr_val);
-                reg_last_nodes ~= csr_last_node;
+                csr_last_nodes ~= csr_last_node;
             }
 
             pragma(inline, true) void log_found_sources(InfoLeaf[] sources) {
@@ -562,31 +565,18 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             pragma(inline, true) void do_reg_trace(InfoNode last_node) {
-                // now start backtracing
-                mixin(LOG_INFO!(
-                        `format("backtracking information flow for node: %s", last_node)`));
                 auto reg_sources = backtrace_information_flow(last_node);
-
                 log_found_sources(reg_sources);
-
                 clobbered_regs_sources[cast(TRegSet) last_node.data] = reg_sources;
             }
 
             pragma(inline, true) void do_mem_trace(InfoNode last_node) {
-                // now start backtracing
-                mixin(LOG_INFO!(
-                        `format("backtracking information flow for node: %s", last_node)`));
                 auto mem_sources = backtrace_information_flow(last_node);
-
                 log_found_sources(mem_sources);
-
                 clobbered_mem_sources[last_node.data] = mem_sources;
             }
 
             pragma(inline, true) void do_csr_trace(InfoNode last_node) {
-                // now start backtracing
-                mixin(LOG_INFO!(
-                        `format("backtracking information flow for node: %s", last_node)`));
                 auto csr_sources = backtrace_information_flow(last_node);
                 log_found_sources(csr_sources);
                 clobbered_csr_sources[last_node.data] = csr_sources;
@@ -594,42 +584,32 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
             // select serial/parallel task
             // do work
+            
+            auto gen_analyze_work_loops()() {
+                auto sb = appender!string;
+                
+                enum TRACE_ITEMS = ["reg", "mem", "csr"];
+                foreach (item; TRACE_ITEMS) {
+                    auto work_loop = format(`
+                        foreach (last_node; %s_last_nodes) {
+                            do_%s_trace(last_node);
+                        }
+                    `, item, item);
+                    sb ~= format(`
+                        if (analysis_parallelized) {
+                            auto %s_last_nodes_work = parallel(%s_last_nodes);
+                            %s
+                        } else {
+                            auto %s_last_nodes_work = %s_last_nodes;
+                            %s
+                        }
+                    `, item, item, work_loop, item, item, work_loop);
+                }
 
-            if (analysis_parallelized) {
-                auto reg_last_nodes_work = parallel(reg_last_nodes);
-                foreach (last_node; reg_last_nodes_work) {
-                    do_reg_trace(last_node);
-                }
-            } else {
-                auto reg_last_nodes_work = reg_last_nodes;
-                foreach (last_node; reg_last_nodes_work) {
-                    do_reg_trace(last_node);
-                }
+                return sb.data;
             }
 
-            if (analysis_parallelized) {
-                auto mem_last_nodes_work = parallel(mem_last_nodes);
-                foreach (last_node; mem_last_nodes_work) {
-                    do_mem_trace(last_node);
-                }
-            } else {
-                auto mem_last_nodes_work = mem_last_nodes;
-                foreach (last_node; mem_last_nodes_work) {
-                    do_mem_trace(last_node);
-                }
-            }
-
-            if (analysis_parallelized) {
-                auto csr_last_nodes_work = parallel(reg_last_nodes);
-                foreach (last_node; csr_last_nodes_work) {
-                    do_csr_trace(last_node);
-                }
-            } else {
-                auto csr_last_nodes_work = reg_last_nodes;
-                foreach (last_node; csr_last_nodes_work) {
-                    do_csr_trace(last_node);
-                }
-            }
+            mixin(gen_analyze_work_loops!());
         }
     }
 }
