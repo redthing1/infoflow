@@ -12,6 +12,8 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
     alias TBaseAnalysis = BaseAnalysis!(TRegWord, TMemWord, TRegSet);
     mixin(TInfoLog.GenAliases!("TInfoLog"));
 
+    private enum REG_IDS = [EnumMembers!TRegSet];
+
     class RegTouchAnalyzer : TBaseAnalysis.BaseAnalyzer {
         int window_size = 8192;
         int window_slide = 512;
@@ -27,9 +29,12 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
 
             RegFreeRange[] free_ranges;
         }
+        alias RegUsages = RegUsage[TRegSet];
 
-        RegUsage[TRegSet] reg_usage;
-        enum REG_IDS = [EnumMembers!TRegSet];
+        /// one RegUsages for each window analyzed
+        RegUsages[] windows_reg_usage;
+
+        ulong log_analysis_time;
 
         this(CommitTrace commit_trace, bool parallelized = false) {
             super(commit_trace, parallelized);
@@ -86,14 +91,17 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
         }
 
         override void analyze() {
-            // initialize the reg usage
-            reg_usage.clear();
+            MonoTime tmr_start = MonoTime.currTime;
 
-            auto REG_IDS = [EnumMembers!TRegSet];
-            foreach (reg_id; REG_IDS) {
-                reg_usage[reg_id] = RegUsage(-1, -1);
-            }
+            analyze_all_windows();
 
+            MonoTime tmr_end = MonoTime.currTime;
+            auto elapsed = tmr_end - tmr_start;
+
+            log_analysis_time = elapsed.total!"usecs";
+        }
+
+        void analyze_all_windows() {
             // slide window through the commits
             for (long window_start = 0; window_start < trace.commits.length - window_size;
                 window_start += window_slide) {
@@ -102,7 +110,10 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
                     break;
 
                 // analyze the window
-                analyze_window(window_start, window_end);
+                auto reg_usages = analyze_window(window_start, window_end);
+
+                // save results
+                windows_reg_usage ~= reg_usages;
 
                 auto commits_after = trace.commits.length - window_end;
                 if (commits_after <= window_slide) {
@@ -112,10 +123,18 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
             }
         }
 
-        void analyze_window(long window_start, long window_end) {
+        RegUsages analyze_window(long window_start, long window_end) {
             auto window_commits = trace.commits[window_start .. window_end];
 
             mixin(LOG_INFO!(`format("analyzing window [%d, %d]", window_start, window_end)`));
+
+            // initialize the reg usage
+            RegUsages reg_usage;
+
+            auto REG_IDS = [EnumMembers!TRegSet];
+            foreach (reg_id; REG_IDS) {
+                reg_usage[reg_id] = RegUsage(-1, -1);
+            }
 
             // go through the window
             for (auto i = 0; i < window_commits.length; i++) {
@@ -176,6 +195,8 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
                     }
                 }
             }
+
+            return reg_usage;
         }
 
         void dump_analysis() {
