@@ -118,10 +118,10 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
                 auto window_range = CommitRange(window_start, window_end);
 
                 // analyze the window
-                auto reg_usages = analyze_window(window_range);
+                auto window_analysis = analyze_window(window_range);
 
                 // save results
-                window_analyses ~= WindowAnalysis(window_range, reg_usages);
+                window_analyses ~= window_analysis;
 
                 auto commits_after = trace.commits.length - window_end;
                 if (commits_after <= window_slide) {
@@ -135,7 +135,7 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
             window_analyses.sort!(window_comp);
         }
 
-        RegUsages analyze_window(CommitRange window_range) {
+        WindowAnalysis analyze_window(CommitRange window_range) {
             auto window_start = window_range.start;
             auto window_end = window_range.end;
             auto window_commits = trace.commits[window_start..window_end];
@@ -210,7 +210,7 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
                 }
             }
 
-            return reg_usage;
+            return WindowAnalysis(window_range, reg_usage);
         }
 
         void dump_analysis() {
