@@ -3,6 +3,7 @@ module analyzers.regtouch;
 import std.algorithm : map, filter;
 import std.range : array;
 import std.algorithm.comparison;
+import std.traits : EnumMembers;
 
 import infoflow.analysis.common;
 
@@ -26,6 +27,9 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
 
             RegFreeRange[] free_ranges;
         }
+
+        RegUsage[TRegSet] reg_usage;
+        enum REG_IDS = [EnumMembers!TRegSet];
 
         this(CommitTrace commit_trace, bool parallelized = false) {
             super(commit_trace, parallelized);
@@ -62,8 +66,8 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
                 auto commit = &trace.commits[i];
 
                 // when searching for a read, we are looking for the reg to be in the dest regs
-                // for (auto j = 0; j < commit.reg_ids.length; j++) {
-                //     auto scan_reg_id = commit.reg_ids[j];
+                // for (auto j = 0; j < commit.REG_IDS.length; j++) {
+                //     auto scan_reg_id = commit.REG_IDS[j];
                 //     if (scan_reg_id == reg_id) {
                 //         // we found a write
                 //         return i;
@@ -82,6 +86,14 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
         }
 
         override void analyze() {
+            // initialize the reg usage
+            reg_usage.clear();
+
+            auto REG_IDS = [EnumMembers!TRegSet];
+            foreach (reg_id; REG_IDS) {
+                reg_usage[reg_id] = RegUsage(-1, -1);
+            }
+
             // slide window through the commits
             for (long window_start = 0; window_start < trace.commits.length - window_size;
                 window_start += window_slide) {
@@ -105,22 +117,12 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
 
             mixin(LOG_INFO!(`format("analyzing window [%d, %d]", window_start, window_end)`));
 
-            RegUsage[TRegSet] reg_usage;
-
-            // initialize the reg usage
-            import std.traits : EnumMembers;
-
-            auto reg_ids = [EnumMembers!TRegSet];
-            foreach (reg_id; reg_ids) {
-                reg_usage[reg_id] = RegUsage(-1, -1);
-            }
-
             // go through the window
             for (auto i = 0; i < window_commits.length; i++) {
                 auto commit = &window_commits[i];
 
                 // for each reg
-                foreach (reg_id; reg_ids) {
+                foreach (reg_id; REG_IDS) {
                     bool reg_was_read = false;
                     bool reg_was_written = false;
 
