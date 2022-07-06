@@ -2,7 +2,7 @@ module analyzers.regtouch;
 
 import std.algorithm : map, filter;
 import std.range : array;
-import std.algorithm.comparison;
+import std.algorithm.comparison : min, max;
 import std.algorithm.sorting: sort;
 import std.traits : EnumMembers;
 
@@ -39,6 +39,9 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
 
         /// one analysis per window
         WindowAnalysis[] window_analyses;
+        
+        /// the full analysis computed from the window analyses
+        WindowAnalysis full_analysis;
 
         ulong log_analysis_time;
 
@@ -131,8 +134,43 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             // sort our windows by start
-            alias window_comp = (a, b) => a.commit_range.start <= b.commit_range.start;
+            alias window_comp = (a, b) => a.commit_range.start < b.commit_range.start;
             window_analyses.sort!(window_comp);
+
+            // now that we have all our window analysis, combine them into a single analysis
+            // for each register, we want to combine all free ranges
+            RegUsages full_usages;
+
+            // for each reg
+            foreach (reg_id; REG_IDS) {
+                // for each window
+
+                // collect all free ranges for this reg
+                CommitRange[] my_free_ranges;
+                foreach (window_analysis; window_analyses) {
+                    my_free_ranges ~= window_analysis.reg_usages[reg_id].free_ranges;                    
+                }
+
+                // combine free ranges, merging overlapping ranges
+                // 1. sort
+                my_free_ranges.sort!((a, b) => a.start < b.start);
+                // 2. merge
+                CommitRange[] merged_free_ranges;
+
+                long last_end = 0;
+                foreach (free_range; my_free_ranges) {
+                    if (free_range.start > last_end) {
+                        // we have a gap, so add it
+                        merged_free_ranges ~= CommitRange(last_end, free_range.start);
+                    }
+                    last_end = max(last_end, free_range.end);
+                }
+
+                // save the merged free ranges
+                full_usages[reg_id] = RegUsage(-1, -1, merged_free_ranges);
+            }
+
+            full_analysis = WindowAnalysis(CommitRange(0, trace.commits.length - 1), full_usages);
         }
 
         WindowAnalysis analyze_window(CommitRange window_range) {
@@ -214,6 +252,15 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
         }
 
         void dump_analysis() {
+            // dump the full analysis
+            writefln(" reg usage:");
+            foreach (reg_id; REG_IDS) {
+                writefln("  reg %s:", reg_id);
+
+                foreach (free_range; full_analysis.reg_usages[reg_id].free_ranges) {
+                    writefln("   free [%s, %s]", free_range.start, free_range.end);
+                }
+            }
         }
 
         void dump_summary() {
