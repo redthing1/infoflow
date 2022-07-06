@@ -37,6 +37,21 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
             RegUsages reg_usages;
         }
 
+        struct RangeStats {
+            long n; // number
+            float mean; // mean
+            float min; // minimum
+            float q1; // first quartile
+            float median; // median
+            float q3; // third quartile
+            float max; // maximum
+
+            string toString() const {
+                return format("n=%d, mean=%.1f, min=%.1f, q1=%.1f, median=%.1f, q3=%.1f, max=%.1f",
+                              n, mean, min, q1, median, q3, max);
+            }
+        }
+
         /// one analysis per window
         WindowAnalysis[] window_analyses;
         
@@ -251,15 +266,52 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
             return WindowAnalysis(window_range, reg_usage);
         }
 
+        RangeStats calculate_range_stats(CommitRange[] ranges) {
+            RangeStats stats;
+            float length_sum = 0;
+            long[] range_lengths;
+
+            if (ranges.length == 0) return stats;
+
+            for (auto i = 0; i < ranges.length; i++) {
+                auto range = ranges[i];
+                auto length = range.end - range.start;
+
+                length_sum += length;
+                range_lengths ~= length;
+            }
+            // sort the lengths
+            range_lengths.sort();
+
+            stats.n = ranges.length;
+            stats.mean = cast(float) length_sum / ranges.length;
+            stats.median = range_lengths[range_lengths.length / 2];
+            stats.min = range_lengths[0];
+            stats.max = range_lengths[range_lengths.length - 1];
+            stats.q1 = range_lengths[range_lengths.length / 4];
+            stats.q3 = range_lengths[range_lengths.length / 4 * 3];
+
+            return stats;
+        }
+
         void dump_analysis() {
             // dump the full analysis
             writefln(" reg usage:");
             foreach (reg_id; REG_IDS) {
                 writefln("  reg %s:", reg_id);
+                
+                // show free ranges
+                writefln("   free ranges");
+                auto reg_free_ranges = full_analysis.reg_usages[reg_id].free_ranges;
+                if (reg_free_ranges.length == 0) continue;
 
-                foreach (free_range; full_analysis.reg_usages[reg_id].free_ranges) {
-                    writefln("   free [%s, %s]", free_range.start, free_range.end);
+                foreach (free_range; reg_free_ranges) {
+                    writefln("    free [%s, %s]", free_range.start, free_range.end);
                 }
+                
+                // calculate some statistics
+                auto stats = calculate_range_stats(reg_free_ranges);
+                writefln("   stats: %s", stats);
             }
         }
 
