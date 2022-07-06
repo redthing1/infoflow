@@ -52,6 +52,12 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
             }
         }
 
+        enum AccessType {
+            Read = 1 << 0,
+            Write = 1 << 1,
+            ReadWrite = Read | Write,
+        }
+
         /// one analysis per window
         WindowAnalysis[] window_analyses;
         
@@ -64,49 +70,31 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
             super(commit_trace, parallelized);
         }
 
-        long find_commit_reg_read(long from_commit, TRegSet reg_id, bool search_forward) {
+        long find_commit_reg_usage(long from_commit, TRegSet reg_id, AccessType access_type, bool search_forward) {
             auto delta = search_forward ? 1 : -1;
 
             // go through commits until we find one that touches the register
             for (auto i = from_commit; i >= 0 && i < trace.commits.length; i += delta) {
                 auto commit = &trace.commits[i];
 
-                // when searching for a read, we are looking for the reg to be in the commit sources
-                for (auto j = 0; j < commit.sources.length; j++) {
-                    auto source = &commit.sources[j];
-
-                    if ((source.type & InfoType.Register) > 0) {
-                        if (source.data == reg_id) {
-                            // we found a read
+                if ((access_type & AccessType.Write) > 0) {
+                    // when searching for a write, we are looking for the reg to be in the commit effects
+                    for (auto j = 0; j < commit.effects.length; j++) {
+                        auto effect = &commit.effects[j];
+                        if (effect.type & InfoType.Register && effect.data == reg_id) {
+                            // we found a write
                             return i;
                         }
                     }
                 }
-            }
-
-            return -1;
-        }
-
-        long find_commit_reg_write(long from_commit, TRegSet reg_id, bool search_forward) {
-            auto delta = search_forward ? 1 : -1;
-
-            // go through commits until we find one that touches the register
-            for (auto i = from_commit; i >= 0 && i < trace.commits.length; i += delta) {
-                auto commit = &trace.commits[i];
-
-                // when searching for a read, we are looking for the reg to be in the dest regs
-                // for (auto j = 0; j < commit.REG_IDS.length; j++) {
-                //     auto scan_reg_id = commit.REG_IDS[j];
-                //     if (scan_reg_id == reg_id) {
-                //         // we found a write
-                //         return i;
-                //     }
-                // }
-                for (auto j = 0; j < commit.effects.length; j++) {
-                    auto effect = commit.effects[j];
-                    if (effect.type & InfoType.Register && effect.data == reg_id) {
-                        // we found a write
-                        return i;
+                if ((access_type & AccessType.Read) > 0) {
+                    // when searching for a read, we are looking for the reg to be in the commit sources
+                    for (auto j = 0; j < commit.sources.length; j++) {
+                        auto source = &commit.sources[j];
+                        if (source.type & InfoType.Register && source.data == reg_id) {
+                            // we found a read
+                            return i;
+                        }
                     }
                 }
             }
@@ -126,8 +114,11 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
         }
 
         void analyze_all_windows() {
+            auto final_commit_ix = (cast(long) trace.commits.length) - 1;
+
             // slide window through the commits
-            for (long window_start = 0; window_start < trace.commits.length - window_size;
+            for (long window_start = 0;
+                window_start == 0 || window_start < (cast(long) trace.commits.length - window_size);
                 window_start += window_slide) {
                 long window_end = min(window_start + window_size, trace.commits.length);
                 if (window_start >= window_end)
@@ -185,7 +176,39 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
                 full_usages[reg_id] = RegUsage(-1, -1, merged_free_ranges);
             }
 
-            full_analysis = WindowAnalysis(CommitRange(0, trace.commits.length - 1), full_usages);
+            // finally, do one last pass to see if any of the registers are fully unused
+            foreach (reg_id; REG_IDS) {
+                writefln("final check for: %s", reg_id);
+                // auto reg_last_touch_commit =
+                //     find_commit_reg_usage(final_commit_ix, reg_id, AccessType.ReadWrite, false);
+                auto reg_last_read =
+                    find_commit_reg_usage(final_commit_ix, reg_id, AccessType.Read, false);
+                auto reg_last_write =
+                    find_commit_reg_usage(final_commit_ix, reg_id, AccessType.Write, false);
+                if (reg_last_read == -1 && reg_last_write == -1) {                    
+                    // the register is fully unused
+                    full_usages[reg_id] = RegUsage(-1, -1, [CommitRange(0, final_commit_ix)]);
+                    continue;
+                } else if (reg_last_read == -1 && reg_last_write >= 0) {
+                    // the register is never read, but it is written to
+                    full_usages[reg_id] = RegUsage(-1, reg_last_write, [CommitRange(0, final_commit_ix)]);
+                    continue;
+                }
+
+                // one more scenario: register is never read after a certain point
+                auto last_useful_usage = reg_last_read;
+                if (last_useful_usage < final_commit_ix) {
+                    auto last_useful_dist = final_commit_ix - last_useful_usage;
+                    enum LAST_USEFUL_MIN_DIST = 8;
+                    if (last_useful_dist < LAST_USEFUL_MIN_DIST) continue;
+
+                    // there is room between when it's last read and the end of the trace
+                    full_usages[reg_id].free_ranges ~= CommitRange(last_useful_usage, final_commit_ix);
+                    continue;
+                }
+            }
+
+            full_analysis = WindowAnalysis(CommitRange(0, final_commit_ix), full_usages);
         }
 
         WindowAnalysis analyze_window(CommitRange window_range) {
@@ -301,10 +324,10 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
                 writefln("  reg %s:", reg_id);
                 
                 // show free ranges
-                writefln("   free ranges");
                 auto reg_free_ranges = full_analysis.reg_usages[reg_id].free_ranges;
                 if (reg_free_ranges.length == 0) continue;
 
+                writefln("   free ranges");
                 foreach (free_range; reg_free_ranges) {
                     writefln("    free [%s, %s]", free_range.start, free_range.end);
                 }
