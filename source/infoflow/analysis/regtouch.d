@@ -3,6 +3,7 @@ module analyzers.regtouch;
 import std.algorithm : map, filter;
 import std.range : array;
 import std.algorithm.comparison;
+import std.algorithm.sorting: sort;
 import std.traits : EnumMembers;
 
 import infoflow.analysis.common;
@@ -18,7 +19,7 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
         int window_size = 8192;
         int window_slide = 512;
 
-        struct RegFreeRange {
+        struct CommitRange {
             long start;
             long end;
         }
@@ -27,12 +28,17 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
             long commit_last_read;
             long commit_last_write;
 
-            RegFreeRange[] free_ranges;
+            CommitRange[] free_ranges;
         }
         alias RegUsages = RegUsage[TRegSet];
 
-        /// one RegUsages for each window analyzed
-        RegUsages[] windows_reg_usage;
+        struct WindowAnalysis {
+            CommitRange commit_range;
+            RegUsages reg_usages;
+        }
+
+        /// one analysis per window
+        WindowAnalysis[] window_analyses;
 
         ulong log_analysis_time;
 
@@ -108,12 +114,14 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
                 long window_end = min(window_start + window_size, trace.commits.length);
                 if (window_start >= window_end)
                     break;
+                
+                auto window_range = CommitRange(window_start, window_end);
 
                 // analyze the window
-                auto reg_usages = analyze_window(window_start, window_end);
+                auto reg_usages = analyze_window(window_range);
 
                 // save results
-                windows_reg_usage ~= reg_usages;
+                window_analyses ~= WindowAnalysis(window_range, reg_usages);
 
                 auto commits_after = trace.commits.length - window_end;
                 if (commits_after <= window_slide) {
@@ -121,10 +129,16 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
                     break;
                 }
             }
+
+            // sort our windows by start
+            alias window_comp = (a, b) => a.commit_range.start <= b.commit_range.start;
+            window_analyses.sort!(window_comp);
         }
 
-        RegUsages analyze_window(long window_start, long window_end) {
-            auto window_commits = trace.commits[window_start .. window_end];
+        RegUsages analyze_window(CommitRange window_range) {
+            auto window_start = window_range.start;
+            auto window_end = window_range.end;
+            auto window_commits = trace.commits[window_start..window_end];
 
             mixin(LOG_INFO!(`format("analyzing window [%d, %d]", window_start, window_end)`));
 
@@ -184,7 +198,7 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
 
                         // there was a useful write/read distance
                         // add a free range
-                        auto free_range = RegFreeRange(
+                        auto free_range = CommitRange(
                             reg_usage[reg_id].commit_last_read + 1,
                             reg_usage[reg_id].commit_last_write - 1);
                         reg_usage[reg_id].free_ranges ~= free_range;
