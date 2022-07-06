@@ -178,7 +178,7 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
 
             // finally, do one last pass to see if any of the registers are fully unused
             foreach (reg_id; REG_IDS) {
-                writefln("final check for: %s", reg_id);
+                // writefln("final check for: %s", reg_id);
                 // auto reg_last_touch_commit =
                 //     find_commit_reg_usage(final_commit_ix, reg_id, AccessType.ReadWrite, false);
                 auto reg_last_read =
