@@ -17,7 +17,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
     alias TBaseAnalysis = BaseAnalysis!(TRegWord, TMemWord, TRegSet);
     mixin(TInfoLog.GenAliases!("TInfoLog"));
 
-    alias IFTTreeNode = IFTAnalysisTree!(TRegWord, TMemWord, TRegSet).IFTTreeNode;
+    alias TIFTAnalysisTree = IFTAnalysisTree!(TRegWord, TMemWord, TRegSet);
+    alias IFTTreeNode = TIFTAnalysisTree.IFTTreeNode;
 
     static assert([EnumMembers!TRegSet].map!(x => x.to!string)
             .canFind!(x => x == "PC"),
@@ -559,7 +560,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     auto last_tree = ift_trees[$ - 1];
                     mixin(LOG_INFO!(
                             `format(" last tree: %s, (~ %.3f KiB)", last_tree,
-                        (sources.length * IFTTreeNode.sizeof) / 1024.0)`));
+                        (sources.length * TIFTAnalysisTree.IFTTreeNodeMemSize) / 1024.0)`));
 
                 }
             }

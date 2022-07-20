@@ -2,6 +2,7 @@ module infoflow.analysis.ift.ift_tree;
 
 import std.container.dlist;
 import std.typecons;
+import std.traits;
 import std.array : appender, array;
 import infoflow.analysis.common;
 import std.algorithm.iteration : map, filter, fold;
@@ -12,6 +13,8 @@ import infoflow.models;
 template IFTAnalysisTree(TRegWord, TMemWord, TRegSet) {
     alias TInfoLog = InfoLog!(TRegWord, TMemWord, TRegSet);
     mixin(TInfoLog.GenAliases!("TInfoLog"));
+
+    enum IFTTreeNodeMemSize = __traits(classInstanceSize, IFTTreeNode);
 
     class IFTTreeNode {
         long commit_id; // the ID of the commit corresponding to this node
