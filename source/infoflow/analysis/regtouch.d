@@ -15,7 +15,7 @@ template RegTouchAnalysis(TRegWord, TMemWord, TRegSet) {
 
     private enum REG_IDS = [EnumMembers!TRegSet];
 
-    class RegTouchAnalyzer : TBaseAnalysis.BaseAnalyzer {
+    final class RegTouchAnalyzer : TBaseAnalysis.BaseAnalyzer {
         int window_size = 8192;
         int window_slide = 512;
 

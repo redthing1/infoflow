@@ -16,7 +16,7 @@ template IFTAnalysisTree(TRegWord, TMemWord, TRegSet) {
 
     enum IFTTreeNodeMemSize = __traits(classInstanceSize, IFTTreeNode);
 
-    class IFTTreeNode {
+    final class IFTTreeNode {
         long commit_id; // the ID of the commit corresponding to this node
         InfoNode node; // the corresponding information node
 

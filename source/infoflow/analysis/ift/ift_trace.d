@@ -26,7 +26,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
     enum PC_REGISTER = to!TRegSet("PC");
 
     /** analyzer for dynamic information flow tracking **/
-    class IFTAnalyzer : TBaseAnalysis.BaseAnalyzer {
+    final class IFTAnalyzer : TBaseAnalysis.BaseAnalyzer {
         Commit clobber;
         InfoLeafs[TRegSet] clobbered_regs_sources;
         InfoLeafs[TRegWord] clobbered_mem_sources;

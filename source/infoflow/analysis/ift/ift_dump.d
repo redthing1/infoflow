@@ -17,7 +17,7 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
     mixin(TInfoLog.GenAliases!("TInfoLog"));
     alias IFTTreeNode = IFTAnalysisTree!(TRegWord, TMemWord, TRegSet).IFTTreeNode;
 
-    class IFTDumper {
+    final class IFTDumper {
         IFTAnalyzer ift;
 
         this(IFTAnalyzer ift) {
