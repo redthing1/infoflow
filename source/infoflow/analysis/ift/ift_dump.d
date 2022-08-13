@@ -138,8 +138,17 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
             }
 
             if (ift.enable_ift_graph) {
-                // // also dump ift tree
-                // writefln(" ift tree:");
+                // also dump ift tree
+                writefln(" ift graph:");
+
+                foreach (node; ift.ift_graph.nodes) {
+                    writefln("  %s", node);
+                }
+                foreach (edge; ift.ift_graph.edges) {
+                    writefln("  %s", edge);
+                    // writefln("  %s %s %s", edge.src, edge.is_forward ? "->" : "<-", edge.dst);
+                }
+                
                 // // go through all ift tree roots
                 // foreach (tree_root; ift.ift_graphs) {
                 //     // do a depth-first traversal

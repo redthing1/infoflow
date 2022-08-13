@@ -37,7 +37,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         IFTDataType included_data = IFTDataType.Standard;
 
         bool enable_ift_graph = false;
-        IFTGraph ift_graph;
+        IFTGraph ift_graph = new IFTGraph();
 
         version (analysis_log) {
             shared long log_visited_info_nodes;
@@ -331,7 +331,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     auto curr_graph_vert = new IFTGraphNode(InfoView(curr.node, curr.owner_commit_ix));
                     // connect ourselves to our parent (parent comes in the future, so edge us -> parent)
                     auto parent_vert = curr.parent.get;
-                    ift_graph.add_edge(IFTGraphEdge(&curr_graph_vert, &parent_vert));
+                    ift_graph.add_edge(IFTGraphEdge(curr_graph_vert, parent_vert));
 
                     maybe_curr_graph_vert = curr_graph_vert;
                 }

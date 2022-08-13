@@ -34,11 +34,15 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
 
     struct IFTGraphEdge {
         /// source node
-        IFTGraphNode* src;
+        IFTGraphNode src;
         /// destination node
-        IFTGraphNode* dst;
+        IFTGraphNode dst;
         /// edge direction
         bool is_forward = true;
+
+        string toString() const {
+            return format("%s %s %s", src, is_forward ? "->" : "<-", dst);
+        }
     }
 
     final class IFTGraphNode {
