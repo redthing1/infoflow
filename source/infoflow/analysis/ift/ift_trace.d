@@ -378,8 +378,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // treat PC as a deterministic register
                     curr.node.type = InfoType.DeterministicRegister;
 
-                    // update tree
-                    curr_graph_vert.info_view.node = curr.node;
+                    if (!maybe_curr_graph_vert.isNull) {
+                        // update tree
+                        maybe_curr_graph_vert.get.info_view.node = curr.node;
+                    }
 
                     auto leaf = InfoLeaf(curr.node, curr.owner_commit_ix);
                     add_info_leaf(leaf);
