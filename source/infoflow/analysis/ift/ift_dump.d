@@ -138,38 +138,38 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
             }
 
             if (ift.enable_ift_graph) {
-                // also dump ift tree
-                writefln(" ift tree:");
-                // go through all ift tree roots
-                foreach (tree_root; ift.ift_graphs) {
-                    // do a depth-first traversal
+                // // also dump ift tree
+                // writefln(" ift tree:");
+                // // go through all ift tree roots
+                // foreach (tree_root; ift.ift_graphs) {
+                //     // do a depth-first traversal
 
-                    struct TreeNodeWalk {
-                        IFTGraphNode tree;
-                        int depth;
-                    }
+                //     struct TreeNodeWalk {
+                //         IFTGraphNode tree;
+                //         int depth;
+                //     }
 
-                    auto stack = DList!TreeNodeWalk();
-                    stack.insertFront(TreeNodeWalk(tree_root, 0));
+                //     auto stack = DList!TreeNodeWalk();
+                //     stack.insertFront(TreeNodeWalk(tree_root, 0));
 
-                    while (!stack.empty) {
-                        auto curr_walk = stack.front;
-                        stack.removeFront();
+                //     while (!stack.empty) {
+                //         auto curr_walk = stack.front;
+                //         stack.removeFront();
 
-                        // visit and print
-                        // indent
-                        for (auto i = 0; i < curr_walk.depth; i++) {
-                            writef("  ");
-                        }
-                        // print node
-                        writefln("%s", curr_walk.tree);
+                //         // visit and print
+                //         // indent
+                //         for (auto i = 0; i < curr_walk.depth; i++) {
+                //             writef("  ");
+                //         }
+                //         // print node
+                //         writefln("%s", curr_walk.tree);
 
-                        // push children
-                        foreach (child; curr_walk.tree.children) {
-                            stack.insertFront(TreeNodeWalk(child, curr_walk.depth + 1));
-                        }
-                    }
-                }
+                //         // push children
+                //         foreach (child; curr_walk.tree.children) {
+                //             stack.insertFront(TreeNodeWalk(child, curr_walk.depth + 1));
+                //         }
+                //     }
+                // }
             }
         }
 

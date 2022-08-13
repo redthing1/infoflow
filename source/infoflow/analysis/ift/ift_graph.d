@@ -22,6 +22,14 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
 
         /// graph edges
         IFTGraphEdge[] edges;
+
+        void add_node(IFTGraphNode node) {
+            nodes ~= node;
+        }
+
+        void add_edge(IFTGraphEdge edge) {
+            edges ~= edge;
+        }
     }
 
     struct IFTGraphEdge {

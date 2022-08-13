@@ -19,7 +19,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
     mixin(TInfoLog.GenAliases!("TInfoLog"));
 
     alias TIFTAnalysisGraph = IFTAnalysisGraph!(TRegWord, TMemWord, TRegSet);
+    alias IFTGraph = TIFTAnalysisGraph.IFTGraph;
     alias IFTGraphNode = TIFTAnalysisGraph.IFTGraphNode;
+    alias IFTGraphEdge = TIFTAnalysisGraph.IFTGraphEdge;
 
     static assert([EnumMembers!TRegSet].map!(x => x.to!string)
             .canFind!(x => x == "PC"),
@@ -33,8 +35,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         InfoLeafs[TRegWord] clobbered_mem_sources;
         InfoLeafs[TRegWord] clobbered_csr_sources;
         IFTDataType included_data = IFTDataType.Standard;
-        IFTGraphNode[] ift_graphs;
+
         bool enable_ift_graph = false;
+        IFTGraph ift_graph;
 
         version (analysis_log) {
             shared long log_visited_info_nodes;
@@ -294,16 +297,18 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     atomicOp!"+="(this.log_found_sources, 1);
             }
 
-            Nullable!IFTGraphNode maybe_tree_root;
+            Nullable!IFTGraphNode maybe_last_node_vert;
             if (enable_ift_graph) {
-                // set up the tree
-                maybe_tree_root = new IFTGraphNode(last_node_last_touch_ix, last_node);
-                ift_graphs ~= maybe_tree_root.get;
+                // add our "last node" to the graph
+                auto last_node_vert = new IFTGraphNode(InfoView(last_node, last_node_last_touch_ix));
+                ift_graph.add_node(last_node_vert);
+
+                maybe_last_node_vert = last_node_vert;
             }
 
             // 3. queue our initial node
             unvisited.insertFront(
-                InfoNodeWalk(last_node, last_node_last_touch_ix, last_node_last_touch_ix, maybe_tree_root));
+                InfoNodeWalk(last_node, last_node_last_touch_ix, last_node_last_touch_ix, maybe_last_node_vert));
 
             // 4. iterative dfs
             while (!unvisited.empty) {
@@ -319,27 +324,16 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 version (analysis_log)
                     atomicOp!"+="(this.log_visited_info_nodes, 1);
 
-                Nullable!IFTGraphNode maybe_curr_tree_node;
-                void update_curr_node_tree_flags() {
-                    if (!enable_ift_graph)
-                        return;
-                    maybe_curr_tree_node.get.hierarchy_all_final = curr.node.is_final();
-                    maybe_curr_tree_node.get.hierarchy_all_deterministic = curr.node.is_deterministic();
-                    maybe_curr_tree_node.get.hierarchy_some_final = curr.node.is_final();
-                    maybe_curr_tree_node.get.hierarchy_some_deterministic = curr.node.is_deterministic();
-                }
+                Nullable!IFTGraphNode maybe_curr_graph_vert;
 
                 if (enable_ift_graph) {
-                    // create a tree node for this commit
-                    auto curr_tree_node = new IFTGraphNode(curr.owner_commit_ix, curr.node);
-                    // update our parent, and add ourselves to the parent's children
-                    curr_tree_node.parent = curr.parent.get;
-                    curr_tree_node.parent.children ~= curr_tree_node;
+                    // create a graph vert for this commit
+                    auto curr_graph_vert = new IFTGraphNode(InfoView(curr.node, curr.owner_commit_ix));
+                    // connect ourselves to our parent (parent comes in the future, so edge us -> parent)
+                    auto parent_vert = curr.parent.get;
+                    ift_graph.add_edge(IFTGraphEdge(&curr_graph_vert, &parent_vert));
 
-                    maybe_curr_tree_node = curr_tree_node;
-
-                    // update our final/deterministic flags
-                    update_curr_node_tree_flags();
+                    maybe_curr_graph_vert = curr_graph_vert;
                 }
 
                 if (curr.node.type == InfoType.Immediate
@@ -384,7 +378,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // treat PC as a deterministic register
                     curr.node.type = InfoType.DeterministicRegister;
 
-                    update_curr_node_tree_flags();
+                    // update tree
+                    curr_graph_vert.info_view.node = curr.node;
 
                     auto leaf = InfoLeaf(curr.node, curr.owner_commit_ix);
                     add_info_leaf(leaf);
@@ -424,7 +419,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // so we should walk through commits touching that dependency
                     // so we add it to our visit queue
                     auto walk_commit_ix = touching_commit_ix - 1;
-                    auto dep_walk = InfoNodeWalk(dep, touching_commit_ix, walk_commit_ix, maybe_curr_tree_node);
+                    auto dep_walk = InfoNodeWalk(dep, touching_commit_ix, walk_commit_ix, maybe_curr_graph_vert);
 
                     // if we have not visited this dependency yet, add it to the unvisited list
                     if (!visited.get(dep_walk, false)) {
@@ -434,76 +429,76 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 }
             }
 
-            if (enable_ift_graph) {
-                analyze_tree_children(maybe_tree_root.get);
-            }
+            // if (enable_ift_graph) {
+            //     analyze_tree_children(maybe_tree_root.get);
+            // }
 
             return terminal_leaves.data;
         }
 
-        void analyze_tree_children(IFTGraphNode tree_root) {
-            // now do a post order traversal of the tree
-            auto tree_po_s = DList!IFTGraphNode();
-            auto tree_po_path = DList!IFTGraphNode();
+        // void analyze_tree_children(IFTGraphNode tree_root) {
+        //     // now do a post order traversal of the tree
+        //     auto tree_po_s = DList!IFTGraphNode();
+        //     auto tree_po_path = DList!IFTGraphNode();
 
-            tree_po_s.insertFront(tree_root); // push root onto stack
-            while (!tree_po_s.empty) {
-                auto root = tree_po_s.front;
+        //     tree_po_s.insertFront(tree_root); // push root onto stack
+        //     while (!tree_po_s.empty) {
+        //         auto root = tree_po_s.front;
 
-                if (!tree_po_path.empty && tree_po_path.front == root) {
-                    // both are equal, so we can pop from both
+        //         if (!tree_po_path.empty && tree_po_path.front == root) {
+        //             // both are equal, so we can pop from both
 
-                    if (root.children.length > 0) {
-                        // this is an inner node, update hierarchy final/deterministic flags
+        //             if (root.children.length > 0) {
+        //                 // this is an inner node, update hierarchy final/deterministic flags
 
-                        auto all_children_final = true;
-                        auto all_children_deterministic = true;
+        //                 auto all_children_final = true;
+        //                 auto all_children_deterministic = true;
 
-                        auto some_children_final = false;
-                        auto some_children_deterministic = false;
+        //                 auto some_children_final = false;
+        //                 auto some_children_deterministic = false;
 
-                        for (auto i = 0; i < root.children.length; i++) {
-                            if (!some_children_final && root.children[i].hierarchy_some_final) {
-                                // we found a child that has some final
-                                some_children_final = true;
-                            }
-                            if (!some_children_deterministic && root
-                                .children[i].hierarchy_some_deterministic) {
-                                // we found a child that has some deterministic
-                                some_children_deterministic = true;
-                            }
+        //                 for (auto i = 0; i < root.children.length; i++) {
+        //                     if (!some_children_final && root.children[i].hierarchy_some_final) {
+        //                         // we found a child that has some final
+        //                         some_children_final = true;
+        //                     }
+        //                     if (!some_children_deterministic && root
+        //                         .children[i].hierarchy_some_deterministic) {
+        //                         // we found a child that has some deterministic
+        //                         some_children_deterministic = true;
+        //                     }
 
-                            if (all_children_final && !root.children[i].hierarchy_all_final) {
-                                // we found a child that does not have all final
-                                all_children_final = false;
-                            }
-                            if (all_children_deterministic && !root
-                                .children[i].hierarchy_all_deterministic) {
-                                // we found a child that does not have all deterministic
-                                all_children_deterministic = false;
-                            }
-                        }
-                        root.hierarchy_some_final = some_children_final;
-                        root.hierarchy_some_deterministic = some_children_deterministic;
-                        root.hierarchy_all_final = all_children_final;
-                        root.hierarchy_all_deterministic = all_children_deterministic;
-                    }
+        //                     if (all_children_final && !root.children[i].hierarchy_all_final) {
+        //                         // we found a child that does not have all final
+        //                         all_children_final = false;
+        //                     }
+        //                     if (all_children_deterministic && !root
+        //                         .children[i].hierarchy_all_deterministic) {
+        //                         // we found a child that does not have all deterministic
+        //                         all_children_deterministic = false;
+        //                     }
+        //                 }
+        //                 root.hierarchy_some_final = some_children_final;
+        //                 root.hierarchy_some_deterministic = some_children_deterministic;
+        //                 root.hierarchy_all_final = all_children_final;
+        //                 root.hierarchy_all_deterministic = all_children_deterministic;
+        //             }
 
-                    tree_po_s.removeFront();
-                    tree_po_path.removeFront();
-                } else {
-                    // push onto path
-                    tree_po_path.insertFront(root);
+        //             tree_po_s.removeFront();
+        //             tree_po_path.removeFront();
+        //         } else {
+        //             // push onto path
+        //             tree_po_path.insertFront(root);
 
-                    // push children in reverse order
-                    for (auto i = cast(long)(root.children.length) - 1; i >= 0;
-                        i--) {
-                        auto child = root.children[i];
-                        tree_po_s.insertFront(child);
-                    }
-                }
-            }
-        }
+        //             // push children in reverse order
+        //             for (auto i = cast(long)(root.children.length) - 1; i >= 0;
+        //                 i--) {
+        //                 auto child = root.children[i];
+        //                 tree_po_s.insertFront(child);
+        //             }
+        //         }
+        //     }
+        // }
 
         void analyze_flows() {
             import std.parallelism;
@@ -559,13 +554,13 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 mixin(LOG_INFO!(
                         `format(" sources found: %s (~ %.3f KiB)", sources.length,
                     (sources.length * InfoNode.sizeof) / 1024.0)`));
-                if (enable_ift_graph) {
-                    auto last_tree = ift_graphs[$ - 1];
-                    mixin(LOG_INFO!(
-                            `format(" last tree: %s, (~ %.3f KiB)", last_tree,
-                        (sources.length * TIFTAnalysisGraph.IFTGraphNodeMemSize) / 1024.0)`));
+                // if (enable_ift_graph) {
+                //     auto last_tree = ift_graphs[$ - 1];
+                //     mixin(LOG_INFO!(
+                //             `format(" last tree: %s, (~ %.3f KiB)", last_tree,
+                //         (sources.length * TIFTAnalysisGraph.IFTGraphNodeMemSize) / 1024.0)`));
 
-                }
+                // }
             }
 
             pragma(inline, true) void do_reg_trace(InfoNode last_node) {
