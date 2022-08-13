@@ -43,6 +43,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             shared long log_visited_info_nodes;
             shared long log_commits_walked;
             shared long log_found_sources;
+            shared long log_graph_nodes_walked;
+            shared long log_graph_nodes_cache_hits;
+            shared long log_graph_nodes_cache_misses;
         }
         ulong log_analysis_time;
 
@@ -75,6 +78,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 log_visited_info_nodes = 0;
                 log_commits_walked = 0;
                 log_found_sources = 0;
+                log_graph_nodes_walked = 0;
+                log_graph_nodes_cache_hits = 0;
+                log_graph_nodes_cache_misses = 0;
             }
 
             // calculate diffs and clobber
@@ -328,16 +334,24 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 if (enable_ift_graph) {
                     // create a graph vert for this commit
+                    
+                    version (analysis_log)
+                        atomicOp!"+="(this.log_graph_nodes_walked, 1);
+                    
                     // use a cache so that we don't create duplicate vertices
                     IFTGraphNode curr_graph_vert;
                     auto cached_graph_vert = ift_graph.find_cached(curr.owner_commit_ix, curr.node);
                     if (cached_graph_vert) {
-                        // cache hit!
-                        // writefln("cached graph cache hit for commit #%s, node: %s", curr.owner_commit_ix, curr.node);
                         curr_graph_vert = cached_graph_vert;
+                        
+                        version (analysis_log)
+                            atomicOp!"+="(this.log_graph_nodes_cache_hits, 1);
                     } else {
                         curr_graph_vert = new IFTGraphNode(InfoView(curr.node, curr.owner_commit_ix));
                         ift_graph.add_node(curr_graph_vert);
+
+                        version (analysis_log)
+                            atomicOp!"+="(this.log_graph_nodes_cache_misses, 1);
                     }
                     // connect ourselves to our parent (parent comes in the future, so edge us -> parent)
                     auto parent_vert = curr.parent.get;

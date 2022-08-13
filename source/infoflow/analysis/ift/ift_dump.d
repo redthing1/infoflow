@@ -234,6 +234,9 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                 writefln("  found sources:          %8d", ift.log_found_sources);
                 writefln("  walked info:            %8d", ift.log_visited_info_nodes);
                 writefln("  walked commits:         %8d", ift.log_commits_walked);
+                writefln("  walked graph nodes:     %8d", ift.log_graph_nodes_walked);
+                writefln("  graph cache hits:       %8d", ift.log_graph_nodes_cache_hits);
+                writefln("  graph cache misses:     %8d", ift.log_graph_nodes_cache_misses);
             }
             writefln("  analysis time:          %7ss", (
                     cast(double) ift.log_analysis_time / 1_000_000));
