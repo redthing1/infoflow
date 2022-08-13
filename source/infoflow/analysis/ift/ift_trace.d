@@ -328,7 +328,17 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 if (enable_ift_graph) {
                     // create a graph vert for this commit
-                    auto curr_graph_vert = new IFTGraphNode(InfoView(curr.node, curr.owner_commit_ix));
+                    // use a cache so that we don't create duplicate vertices
+                    IFTGraphNode curr_graph_vert;
+                    auto cached_graph_vert = ift_graph.find_cached(curr.owner_commit_ix, curr.node);
+                    if (cached_graph_vert) {
+                        // cache hit!
+                        // writefln("cached graph cache hit for commit #%s, node: %s", curr.owner_commit_ix, curr.node);
+                        curr_graph_vert = cached_graph_vert;
+                    } else {
+                        curr_graph_vert = new IFTGraphNode(InfoView(curr.node, curr.owner_commit_ix));
+                        ift_graph.add_node(curr_graph_vert);
+                    }
                     // connect ourselves to our parent (parent comes in the future, so edge us -> parent)
                     auto parent_vert = curr.parent.get;
                     ift_graph.add_edge(IFTGraphEdge(curr_graph_vert, parent_vert));
