@@ -37,11 +37,12 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
         IFTGraphNode src;
         /// destination node
         IFTGraphNode dst;
-        /// edge direction
-        bool is_forward = true;
+        // /// edge direction
+        // bool is_forward = true;
 
         string toString() const {
-            return format("%s %s %s", src, is_forward ? "->" : "<-", dst);
+            return format("%s -> %s", src, dst);
+            // return format("%s %s %s", src, is_forward ? "->" : "<-", dst);
         }
     }
 

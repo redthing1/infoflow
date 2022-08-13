@@ -5,7 +5,7 @@ import std.typecons;
 import std.array : appender, array;
 import infoflow.analysis.common;
 import std.algorithm.iteration : map, filter, fold;
-import core.atomic: atomicOp;
+import core.atomic : atomicOp;
 import std.exception : enforce;
 
 import infoflow.models;
@@ -136,50 +136,81 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                     log_commit_for_source(source);
                 }
             }
+        }
 
-            if (ift.enable_ift_graph) {
-                // also dump ift tree
-                writefln(" ift graph:");
+        void dump_graph() {
+            // also dump ift graph
+            writefln(" ift graph:");
 
-                foreach (node; ift.ift_graph.nodes) {
-                    writefln("  %s", node);
-                }
-                foreach (edge; ift.ift_graph.edges) {
-                    writefln("  %s", edge);
-                    // writefln("  %s %s %s", edge.src, edge.is_forward ? "->" : "<-", edge.dst);
-                }
-                
-                // // go through all ift tree roots
-                // foreach (tree_root; ift.ift_graphs) {
-                //     // do a depth-first traversal
-
-                //     struct TreeNodeWalk {
-                //         IFTGraphNode tree;
-                //         int depth;
-                //     }
-
-                //     auto stack = DList!TreeNodeWalk();
-                //     stack.insertFront(TreeNodeWalk(tree_root, 0));
-
-                //     while (!stack.empty) {
-                //         auto curr_walk = stack.front;
-                //         stack.removeFront();
-
-                //         // visit and print
-                //         // indent
-                //         for (auto i = 0; i < curr_walk.depth; i++) {
-                //             writef("  ");
-                //         }
-                //         // print node
-                //         writefln("%s", curr_walk.tree);
-
-                //         // push children
-                //         foreach (child; curr_walk.tree.children) {
-                //             stack.insertFront(TreeNodeWalk(child, curr_walk.depth + 1));
-                //         }
-                //     }
-                // }
+            foreach (node; ift.ift_graph.nodes) {
+                writefln("  %s", node);
             }
+            foreach (edge; ift.ift_graph.edges) {
+                writefln("  %s", edge);
+                // writefln("  %s %s %s", edge.src, edge.is_forward ? "->" : "<-", edge.dst);
+            }
+
+            // // go through all ift tree roots
+            // foreach (tree_root; ift.ift_graphs) {
+            //     // do a depth-first traversal
+
+            //     struct TreeNodeWalk {
+            //         IFTGraphNode tree;
+            //         int depth;
+            //     }
+
+            //     auto stack = DList!TreeNodeWalk();
+            //     stack.insertFront(TreeNodeWalk(tree_root, 0));
+
+            //     while (!stack.empty) {
+            //         auto curr_walk = stack.front;
+            //         stack.removeFront();
+
+            //         // visit and print
+            //         // indent
+            //         for (auto i = 0; i < curr_walk.depth; i++) {
+            //             writef("  ");
+            //         }
+            //         // print node
+            //         writefln("%s", curr_walk.tree);
+
+            //         // push children
+            //         foreach (child; curr_walk.tree.children) {
+            //             stack.insertFront(TreeNodeWalk(child, curr_walk.depth + 1));
+            //         }
+            //     }
+            // }
+        }
+
+        void export_graph_to(string output) {
+            import dgraphviz;
+
+            // auto g = new Directed;
+            // A a;
+            // with (g) {
+            //     node(a, ["shape": "box", "color": "#ff0000"]);
+            //     edge(a, true);
+            //     edge(a, 1, ["style": "dashed", "label": "a-to-1"]);
+            //     edge(true, "foo");
+            // }
+            // g.save("simple.dot");
+
+            auto g = new Directed();
+            writefln(" exporting ift graph as graphviz");
+
+            with (g) {
+                foreach (ift_vert; ift.ift_graph.nodes) {
+                    // node(node, ["shape": "box", "color": "#ff0000"]);
+                    node(ift_vert, ["shape": "box", "label": ift_vert.toString()]);
+                }
+                foreach (ift_edge; ift.ift_graph.edges) {
+                    // edge(edge.src, edge.dst, ["style": "dashed", "label": edge.label]);
+                    edge(ift_edge.src, ift_edge.dst);
+                }
+            }
+
+            g.save(output);
+            writefln(" wrote graphviz data to %s", output);
         }
 
         void dump_summary() {
@@ -204,7 +235,8 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                 writefln("  walked info:            %8d", ift.log_visited_info_nodes);
                 writefln("  walked commits:         %8d", ift.log_commits_walked);
             }
-            writefln("  analysis time:          %7ss", (cast(double) ift.log_analysis_time / 1_000_000));
+            writefln("  analysis time:          %7ss", (
+                    cast(double) ift.log_analysis_time / 1_000_000));
         }
     }
 }
