@@ -20,11 +20,12 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             alias CommitTrace = %s.CommitTrace;
             alias InfoType = %s.InfoType;
             alias InfoNode = %s.InfoNode;
+            alias InfoView = %s.InfoView;
             alias InfoLeaf = %s.InfoLeaf;
             alias InfoLeafs = %s.InfoLeafs;
             alias MemoryMap = %s.MemoryMap;
             alias MemoryPageTable = %s.MemoryPageTable;
-        `, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix);
+        `, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix);
     }
 
     /// memory map entry
@@ -358,11 +359,11 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         }
     }
 
-    /// represents a terminal leaf source of information
-    struct InfoLeaf {
-        /// the information contained at this leaf
+    /// represents an information node at a point in time
+    struct InfoView {
+        /// the information contained at this point
         InfoNode node;
-        /// the commit where this leaf originated
+        /// the commit where this information existed
         long commit_id;
 
         string toString() const {
@@ -372,7 +373,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
 
             auto sb = appender!string;
 
-            sb ~= format("InfoLeaf(node: %s, commit_id: %s)", node, commit_id);
+            sb ~= format("InfoView(node: %s, commit_id: %s)", node, commit_id);
 
             return sb.array;
         }
@@ -386,6 +387,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         }
     }
 
+    alias InfoLeaf = InfoView;
     alias InfoLeafs = InfoLeaf[];
 
     struct CommitTrace {

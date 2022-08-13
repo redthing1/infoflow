@@ -16,16 +16,30 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
 
     enum IFTGraphNodeMemSize = __traits(classInstanceSize, IFTGraphNode);
 
+    final class IFTGraph {
+        /// graph vertices/nodes
+        IFTGraphNode[] nodes;
+
+        /// graph edges
+        IFTGraphEdge[] edges;
+    }
+
+    struct IFTGraphEdge {
+        /// source node
+        IFTGraphNode* src;
+        /// destination node
+        IFTGraphNode* dst;
+        /// edge direction
+        bool is_forward = true;
+    }
+
     final class IFTGraphNode {
-        long commit_id; // the ID of the commit corresponding to this node
-        InfoNode node; // the corresponding information node
+        /// the information as it existed in a point in time
+        InfoView info_view;
 
-        this(long commit_id, InfoNode node) {
-            this.commit_id = commit_id;
-            this.node = node;
+        this(InfoView info_view) {
+            this.info_view = info_view;
         }
-
-        IFTGraphNode[] edges;
 
         override string toString() const {
             import std.string : format;
@@ -34,8 +48,8 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
 
             auto sb = appender!string;
             
-            auto node_str = to!string(node);
-            sb ~= format("#%s %s", commit_id, node_str);
+            auto node_str = to!string(info_view.node);
+            sb ~= format("#%s %s", info_view.commit_id, node_str);
 
             return sb.array;
         }
