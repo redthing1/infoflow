@@ -6,6 +6,7 @@ import std.array : appender, array;
 import infoflow.analysis.common;
 import std.algorithm.iteration : map, filter, fold;
 import core.atomic: atomicOp;
+import std.exception : enforce;
 
 import infoflow.models;
 import infoflow.analysis.ift.ift_trace;
@@ -99,7 +100,7 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                 if (reg_id !in ift.clobbered_regs_sources) {
                     // ???
                     mixin(LOG_ERROR!(`format("  reg %s not in clobbered_regs_sources", reg_id)`));
-                    assert(0, "reg not in clobbered_regs_sources");
+                    enforce(0, "reg not in clobbered_regs_sources");
                 }
                 foreach (source; ift.clobbered_regs_sources[reg_id]) {
                     log_commit_for_source(source);
@@ -113,7 +114,7 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                     // ???
                     mixin(LOG_ERROR!(
                             `format("  mem[%04x] not in clobbered_mem_sources", mem_addr)`));
-                    assert(0, "mem not in clobbered_mem_sources");
+                    enforce(0, "mem not in clobbered_mem_sources");
                 }
                 foreach (source; ift.clobbered_mem_sources[mem_addr]) {
                     log_commit_for_source(source);
@@ -126,7 +127,7 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                 if (csr_id !in ift.clobbered_csr_sources) {
                     // ???
                     mixin(LOG_ERROR!(`format("  csr $%08x not in clobbered_csr_sources", csr_id)`));
-                    assert(0, "csr not in clobbered_csr_sources");
+                    enforce(0, "csr not in clobbered_csr_sources");
                 }
                 foreach (source; ift.clobbered_csr_sources[csr_id]) {
                     log_commit_for_source(source);

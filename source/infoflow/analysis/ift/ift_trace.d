@@ -6,6 +6,7 @@ import std.array : appender, array;
 import infoflow.analysis.common;
 import std.algorithm.iteration : map, filter, fold;
 import core.atomic: atomicOp;
+import std.exception : enforce;
 
 import infoflow.util;
 import infoflow.analysis.ift.ift_tree;
@@ -254,10 +255,12 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 mixin(LOG_ERROR!(
                         `format("ERROR: no touching or matching initial found: %s", node)`));
             } else {
-                assert(0, format("we don't know how to find a last commit touching a node of type %s", node
+                enforce(0, format("we don't know how to find a last commit touching a node of type %s", node
                         .type));
+                assert(0);
             }
-            assert(0, format("could not find touching commit for node: %s, commit <= #%d", node, from_commit));
+            enforce(0, format("could not find touching commit for node: %s, commit <= #%d", node, from_commit));
+            assert(0);
         }
 
         InfoLeaf[] backtrace_information_flow(InfoNode last_node) {
