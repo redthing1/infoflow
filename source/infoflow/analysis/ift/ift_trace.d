@@ -9,7 +9,7 @@ import core.atomic: atomicOp;
 import std.exception : enforce;
 
 import infoflow.util;
-import infoflow.analysis.ift.ift_tree;
+import infoflow.analysis.ift.ift_graph;
 
 template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
     import std.traits;
@@ -18,8 +18,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
     alias TBaseAnalysis = BaseAnalysis!(TRegWord, TMemWord, TRegSet);
     mixin(TInfoLog.GenAliases!("TInfoLog"));
 
-    alias TIFTAnalysisTree = IFTAnalysisTree!(TRegWord, TMemWord, TRegSet);
-    alias IFTTreeNode = TIFTAnalysisTree.IFTTreeNode;
+    alias TIFTAnalysisGraph = IFTAnalysisGraph!(TRegWord, TMemWord, TRegSet);
+    alias IFTGraphNode = TIFTAnalysisGraph.IFTGraphNode;
 
     static assert([EnumMembers!TRegSet].map!(x => x.to!string)
             .canFind!(x => x == "PC"),
@@ -33,8 +33,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         InfoLeafs[TRegWord] clobbered_mem_sources;
         InfoLeafs[TRegWord] clobbered_csr_sources;
         IFTDataType included_data = IFTDataType.Standard;
-        IFTTreeNode[] ift_trees;
-        bool enable_ift_tree = false;
+        IFTGraphNode[] ift_graphs;
+        bool enable_ift_graph = false;
 
         version (analysis_log) {
             shared long log_visited_info_nodes;
@@ -280,7 +280,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 long owner_commit_ix; // which commit this infonode is in
                 long walk_commit_ix; // which commit to walk this back from
 
-                Nullable!IFTTreeNode parent;
+                Nullable!IFTGraphNode parent;
             }
 
             auto unvisited = DList!InfoNodeWalk();
@@ -294,11 +294,11 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     atomicOp!"+="(this.log_found_sources, 1);
             }
 
-            Nullable!IFTTreeNode maybe_tree_root;
-            if (enable_ift_tree) {
+            Nullable!IFTGraphNode maybe_tree_root;
+            if (enable_ift_graph) {
                 // set up the tree
-                maybe_tree_root = new IFTTreeNode(last_node_last_touch_ix, last_node);
-                ift_trees ~= maybe_tree_root.get;
+                maybe_tree_root = new IFTGraphNode(last_node_last_touch_ix, last_node);
+                ift_graphs ~= maybe_tree_root.get;
             }
 
             // 3. queue our initial node
@@ -319,9 +319,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 version (analysis_log)
                     atomicOp!"+="(this.log_visited_info_nodes, 1);
 
-                Nullable!IFTTreeNode maybe_curr_tree_node;
+                Nullable!IFTGraphNode maybe_curr_tree_node;
                 void update_curr_node_tree_flags() {
-                    if (!enable_ift_tree)
+                    if (!enable_ift_graph)
                         return;
                     maybe_curr_tree_node.get.hierarchy_all_final = curr.node.is_final();
                     maybe_curr_tree_node.get.hierarchy_all_deterministic = curr.node.is_deterministic();
@@ -329,9 +329,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     maybe_curr_tree_node.get.hierarchy_some_deterministic = curr.node.is_deterministic();
                 }
 
-                if (enable_ift_tree) {
+                if (enable_ift_graph) {
                     // create a tree node for this commit
-                    auto curr_tree_node = new IFTTreeNode(curr.owner_commit_ix, curr.node);
+                    auto curr_tree_node = new IFTGraphNode(curr.owner_commit_ix, curr.node);
                     // update our parent, and add ourselves to the parent's children
                     curr_tree_node.parent = curr.parent.get;
                     curr_tree_node.parent.children ~= curr_tree_node;
@@ -434,17 +434,17 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 }
             }
 
-            if (enable_ift_tree) {
+            if (enable_ift_graph) {
                 analyze_tree_children(maybe_tree_root.get);
             }
 
             return terminal_leaves.data;
         }
 
-        void analyze_tree_children(IFTTreeNode tree_root) {
+        void analyze_tree_children(IFTGraphNode tree_root) {
             // now do a post order traversal of the tree
-            auto tree_po_s = DList!IFTTreeNode();
-            auto tree_po_path = DList!IFTTreeNode();
+            auto tree_po_s = DList!IFTGraphNode();
+            auto tree_po_path = DList!IFTGraphNode();
 
             tree_po_s.insertFront(tree_root); // push root onto stack
             while (!tree_po_s.empty) {
@@ -559,11 +559,11 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 mixin(LOG_INFO!(
                         `format(" sources found: %s (~ %.3f KiB)", sources.length,
                     (sources.length * InfoNode.sizeof) / 1024.0)`));
-                if (enable_ift_tree) {
-                    auto last_tree = ift_trees[$ - 1];
+                if (enable_ift_graph) {
+                    auto last_tree = ift_graphs[$ - 1];
                     mixin(LOG_INFO!(
                             `format(" last tree: %s, (~ %.3f KiB)", last_tree,
-                        (sources.length * TIFTAnalysisTree.IFTTreeNodeMemSize) / 1024.0)`));
+                        (sources.length * TIFTAnalysisGraph.IFTGraphNodeMemSize) / 1024.0)`));
 
                 }
             }

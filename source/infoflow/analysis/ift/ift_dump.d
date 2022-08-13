@@ -10,13 +10,13 @@ import std.exception : enforce;
 
 import infoflow.models;
 import infoflow.analysis.ift.ift_trace;
-import infoflow.analysis.ift.ift_tree;
+import infoflow.analysis.ift.ift_graph;
 
 template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
     alias IFTAnalyzer = IFTAnalysis!(TRegWord, TMemWord, TRegSet).IFTAnalyzer;
     alias TInfoLog = InfoLog!(TRegWord, TMemWord, TRegSet);
     mixin(TInfoLog.GenAliases!("TInfoLog"));
-    alias IFTTreeNode = IFTAnalysisTree!(TRegWord, TMemWord, TRegSet).IFTTreeNode;
+    alias IFTGraphNode = IFTAnalysisGraph!(TRegWord, TMemWord, TRegSet).IFTGraphNode;
 
     final class IFTDumper {
         IFTAnalyzer ift;
@@ -137,15 +137,15 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                 }
             }
 
-            if (ift.enable_ift_tree) {
+            if (ift.enable_ift_graph) {
                 // also dump ift tree
                 writefln(" ift tree:");
                 // go through all ift tree roots
-                foreach (tree_root; ift.ift_trees) {
+                foreach (tree_root; ift.ift_graphs) {
                     // do a depth-first traversal
 
                     struct TreeNodeWalk {
-                        IFTTreeNode tree;
+                        IFTGraphNode tree;
                         int depth;
                     }
 
