@@ -229,6 +229,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             // writefln("info key toucher cache: %s", commit_effect_touchers_cache);
+            
+            // rehash maps
+            commit_effect_index_cache.rehash();
+            commit_effect_touchers_cache.rehash();
         }
 
         // long find_last_commit_at_pc(TRegWord pc_val, long from_commit) {
