@@ -39,6 +39,11 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         shared bool[InfoNodeWalk] global_node_walk_visited;
         shared InfoLeaf[] global_info_leafs_buffer;
 
+        alias InfoLeafIndices = size_t[];
+        InfoLeafIndices[TRegSet] clobbered_regs_sources;
+        InfoLeafIndices[TRegWord] clobbered_mem_sources;
+        InfoLeafIndices[TRegWord] clobbered_csr_sources;
+
         version (analysis_log) {
             shared long log_visited_info_nodes;
             shared long log_commits_walked;
@@ -415,6 +420,13 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 if (curr in global_node_walk_visited) {
                     version (analysis_log)
                         node_walk_duplicates_acc++;
+                    
+                    // the fast-track path: we've already visited this node, which implies we've already fully walked its hierarchy
+                    // so we can pull its hierarchy from the cache, if it's available
+
+                    // TODO: get the cached terminal leaves from the cache ???
+                    // for now, just skip this iteration
+                    continue;
                 } else {
                     // synchronized { global_node_walk_visited[curr] = true; }
                     global_node_walk_visited[curr] = true;
@@ -696,6 +708,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 // log_found_sources(reg_sources);
                 // clobbered_regs_sources[cast(TRegSet) last_node.data] = reg_sources;
                 auto reg_source_ids = backtrace_information_flow(last_node);
+                clobbered_regs_sources[cast(TRegSet) last_node.data] = reg_source_ids;
             }
 
             pragma(inline, true) void do_mem_trace(InfoNode last_node) {
@@ -703,13 +716,15 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 // log_found_sources(mem_sources);
                 // clobbered_mem_sources[last_node.data] = mem_sources;
                 auto mem_source_ids = backtrace_information_flow(last_node);
+                clobbered_mem_sources[last_node.data] = mem_source_ids;
             }
 
             pragma(inline, true) void do_csr_trace(InfoNode last_node) {
                 // auto csr_sources = backtrace_information_flow(last_node);
                 // log_found_sources(csr_sources);
                 // clobbered_csr_sources[last_node.data] = csr_sources;
-                // auto csr_sources = backtrace_information_flow(last_node);
+                auto csr_sources = backtrace_information_flow(last_node);
+                clobbered_csr_sources[last_node.data] = csr_sources;
             }
 
             // select serial/parallel task
