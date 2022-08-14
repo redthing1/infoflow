@@ -110,19 +110,41 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             return edges[index];
         }
 
-        auto filter_edges_from(IFTGraphNode node) {
+        private auto filter_edges_from(IFTGraphNode node) {
             return filter!(edge => edge.src == node)(edges);
         }
 
-        auto filter_edges_to(IFTGraphNode node) {
+        private auto filter_edges_to(IFTGraphNode node) {
             return filter!(edge => edge.dst == node)(edges);
         }
 
+        alias GraphEdges = IFTGraphEdge[];
+        GraphEdges[IFTGraphNode] _node_neighbors_from_cache;
+        GraphEdges[IFTGraphNode] _node_neighbors_to_cache;
+
+        void build_neighbors_cache() {
+            // for each node, build a list of neighbors, pointing to and from
+            for (size_t i = 0; i < nodes.length; i++) {
+                IFTGraphNode node = nodes[i];
+
+                _node_neighbors_from_cache[node] = filter_edges_from(node).array;
+                _node_neighbors_to_cache[node] = filter_edges_to(node).array;
+            }
+
+            _node_neighbors_from_cache.rehash();
+            _node_neighbors_to_cache.rehash();
+        }
+
         IFTGraphEdge[] get_edges_from(IFTGraphNode node) {
+            // check cache
+            if (node in _node_neighbors_from_cache)
+                return _node_neighbors_from_cache[node];
             return filter_edges_from(node).array;
         }
 
         IFTGraphEdge[] get_edges_to(IFTGraphNode node) {
+            if (node in _node_neighbors_to_cache)
+                return _node_neighbors_to_cache[node];
             return filter_edges_to(node).array;
         }
 
