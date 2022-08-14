@@ -75,8 +75,11 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
         }
 
         void dump_commits() {
+            // writeln("\ncommit log");
+            mixin(LOG_INFO!(`"\ncommit log"`));
             foreach (i, commit; ift.trace.commits) {
-                writefln("%6d %s", i, commit);
+                // writefln("%6d %s", i, commit);
+                mixin(LOG_INFO!(`format("%6d %s", i, commit)`));
             }
         }
 
