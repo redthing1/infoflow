@@ -159,7 +159,7 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
             auto num_minimal_commits = minimal_commit_set.length;
             writefln("  minimal commits: %s", num_minimal_commits);
             writefln("  total commits: %s", ift.trace.commits.length);
-            writefln("  theoretical minimization: %.2f%%",
+            writefln("  theoretical minimum untouched commits: %.2f%%",
                 (100.0 * num_minimal_commits) / ift.trace.commits.length);
         }
 
