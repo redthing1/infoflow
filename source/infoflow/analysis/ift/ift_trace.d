@@ -665,15 +665,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 }
 
                 mixin(LOG_INFO!(
-                        `format(" sources found: %s (~ %.3f KiB)", sources.length,
-                    (sources.length * InfoNode.sizeof) / 1024.0)`));
-                // if (enable_ift_graph) {
-                //     auto last_tree = ift_graphs[$ - 1];
-                //     mixin(LOG_INFO!(
-                //             `format(" last tree: %s, (~ %.3f KiB)", last_tree,
-                //         (sources.length * TIFTAnalysisGraph.IFTGraphNodeMemSize) / 1024.0)`));
-
-                // }
+                        `format(" sources found: %s", sources.length)`));
             }
 
             pragma(inline, true) void do_reg_trace(InfoNode last_node) {
