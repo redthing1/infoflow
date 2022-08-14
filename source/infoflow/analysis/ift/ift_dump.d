@@ -91,19 +91,25 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
             void log_commit_for_source(InfoLeaf source) {
                 minimal_commit_set[source.commit_id] = true;
 
-                writef("   %s", source);
-                if (source.commit_id >= 0) {
-                    auto commit = ift.trace.commits[source.commit_id];
-                    writef(" -> %s", commit);
-                } else {
-                    writef(" -> <init>");
+                if (INFOFLOW_VERBOSITY >= InfoflowVerbosity.trace) {
+                    auto sb = appender!(string);
+
+                    sb ~= "   " ~ source.toString();
+                    if (source.commit_id >= 0) {
+                        auto commit = ift.trace.commits[source.commit_id];
+                        sb ~= " -> " ~ commit.toString();
+                    } else {
+                        sb ~= " -> <init>";
+                    }
+                    
+                    mixin(LOG_TRACE!(`sb.data`));
                 }
-                writeln();
             }
 
             // registers
             foreach (reg_id; ift.clobbered_regs_sources.byKey) {
-                writefln("  reg %s:", reg_id);
+                // writefln("  reg %s:", reg_id);
+                mixin(LOG_TRACE!(`format("  reg %s:", reg_id)`));
                 if (reg_id !in ift.clobbered_regs_sources) {
                     // ???
                     mixin(LOG_ERROR!(`format("  reg %s not in clobbered_regs_sources", reg_id)`));
@@ -116,7 +122,8 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
 
             // memory
             foreach (mem_addr; ift.clobbered_mem_sources.byKey) {
-                writefln("  mem[%04x]:", mem_addr);
+                // writefln("  mem[%04x]:", mem_addr);
+                mixin(LOG_TRACE!(`format("  mem[%04x]:", mem_addr)`));
                 if (mem_addr !in ift.clobbered_mem_sources) {
                     // ???
                     mixin(LOG_ERROR!(
@@ -130,7 +137,8 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
 
             // csr
             foreach (csr_id; ift.clobbered_csr_sources.byKey) {
-                writefln("  csr $%08x:", csr_id);
+                // writefln("  csr $%08x:", csr_id);
+                mixin(LOG_TRACE!(`format("  csr $%08x:", csr_id)`));
                 if (csr_id !in ift.clobbered_csr_sources) {
                     // ???
                     mixin(LOG_ERROR!(`format("  csr $%08x not in clobbered_csr_sources", csr_id)`));

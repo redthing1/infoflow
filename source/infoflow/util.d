@@ -9,6 +9,7 @@ import std.range;
 import std.algorithm;
 
 enum InfoflowVerbosity {
+    debug_ = 3,
     trace = 2,
     info = 1,
     error = 0,
@@ -18,6 +19,12 @@ InfoflowVerbosity INFOFLOW_VERBOSITY = InfoflowVerbosity.error;
 template LOG_TRACE(string Content) {
     enum LOG_TRACE = `
 if (INFOFLOW_VERBOSITY >= InfoflowVerbosity.trace) { writefln(` ~ Content ~ `); }
+    `;
+}
+
+template LOG_DEBUG(string Content) {
+    enum LOG_DEBUG = `
+if (INFOFLOW_VERBOSITY >= InfoflowVerbosity.debug_) { writefln(` ~ Content ~ `); }
     `;
 }
 

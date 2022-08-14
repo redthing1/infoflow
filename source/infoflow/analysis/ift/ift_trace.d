@@ -403,7 +403,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 unvisited.removeFront();
                 visited[curr] = true;
 
-                mixin(LOG_TRACE!(
+                mixin(LOG_DEBUG!(
                         `format("  visiting: node: %s (#%s), walk: %s", curr.node, curr.owner_commit_ix, curr.walk_commit_ix)`));
                 version (analysis_log)
                     visited_info_nodes_acc++;
@@ -447,7 +447,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // all data comes from some sort of leaf source
                     auto leaf = InfoLeaf(curr.node, curr.owner_commit_ix);
                     add_info_leaf(leaf);
-                    mixin(LOG_TRACE!(`format("   leaf (source): %s", leaf)`));
+                    mixin(LOG_DEBUG!(`format("   leaf (source): %s", leaf)`));
 
                     continue;
                 }
@@ -466,7 +466,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         curr.node.type = InfoType.MMIO;
                         auto leaf = InfoLeaf(curr.node, curr.owner_commit_ix);
                         add_info_leaf(leaf);
-                        mixin(LOG_TRACE!(`format("   leaf (mmio): %s", leaf)`));
+                        mixin(LOG_DEBUG!(`format("   leaf (mmio): %s", leaf)`));
 
                         continue;
                     }
@@ -488,7 +488,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                     auto leaf = InfoLeaf(curr.node, curr.owner_commit_ix);
                     add_info_leaf(leaf);
-                    mixin(LOG_TRACE!(`format("   leaf (pc): %s", leaf)`));
+                    mixin(LOG_DEBUG!(`format("   leaf (pc): %s", leaf)`));
 
                     continue;
                 }
@@ -502,20 +502,20 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                     auto leaf = InfoLeaf(curr.node, -1); // the current node came from the initial snapshot
                     add_info_leaf(leaf);
-                    mixin(LOG_TRACE!(`format("   leaf (pre-initial): %s", leaf)`));
+                    mixin(LOG_DEBUG!(`format("   leaf (pre-initial): %s", leaf)`));
 
                     continue;
                 }
 
                 auto touching_commit = trace.commits[touching_commit_ix];
-                mixin(LOG_TRACE!(`format("   found last touching commit (#%s) for node: %s: %s",
+                mixin(LOG_DEBUG!(`format("   found last touching commit (#%s) for node: %s: %s",
                         touching_commit_ix, curr, touching_commit)`));
 
                 // get all dependencies of this commit
                 auto deps = touching_commit.sources.reverse;
                 for (auto i = 0; i < deps.length; i++) {
                     auto dep = deps[i];
-                    mixin(LOG_TRACE!(
+                    mixin(LOG_DEBUG!(
                             `format("    found dependency: %s (#%s)", dep, touching_commit_ix)`));
 
                     // where did this dependency's information come from?
@@ -529,7 +529,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // if we have not visited this dependency yet, add it to the unvisited list
                     if (!visited.get(dep_walk, false)) {
                         unvisited.insertFront(dep_walk);
-                        // mixin(LOG_TRACE!(`format("     queued walk: %s", dep_walk)`));
+                        // mixin(LOG_DEBUG!(`format("     queued walk: %s", dep_walk)`));
                     }
                 }
             }
