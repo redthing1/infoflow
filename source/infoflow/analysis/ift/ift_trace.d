@@ -36,6 +36,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
         bool enable_ift_graph = false;
         IFTGraph ift_graph = new IFTGraph();
+        bool enable_ift_subtree = false;
+        IFTGraphSubtree[] ift_subtrees;
 
         bool aggressive_revisit_skipping = false;
         shared bool[InfoNodeWalk] global_node_walk_visited;
@@ -608,15 +610,18 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 atomicOp!"+="(this.log_global_node_walk_duplicates, node_walk_duplicates_acc);
             }
 
-            if (enable_ift_graph) {
-                find_graph_node_dependency_subtree(maybe_last_node_vert.get);
+            if (enable_ift_graph && enable_ift_subtree) {
+                auto dep_subtree = find_graph_node_dependency_subtree(maybe_last_node_vert.get);
+
+                // store subtree
+                ift_subtrees ~= dep_subtree;
             }
 
             // return terminal_leaves.data;
             return terminal_leaves_ids.data;
         }
 
-        void find_graph_node_dependency_subtree(IFTGraphNode node_root) {
+        IFTGraphSubtree find_graph_node_dependency_subtree(IFTGraphNode node_root) {
             // the node root is the final endpoint of the subtree
             // we want to search upward and find all the inner and leaf nodes
 
@@ -683,9 +688,11 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 }
             }
 
-            // dump the subtree
-            writefln("subtree for %s:", node_root);
-            writefln("%s", root_subtree.dump());
+            // // dump the subtree
+            // writefln("subtree for %s:", node_root);
+            // writefln("%s", root_subtree.dump());
+
+            return root_subtree;
         }
 
         // void analyze_tree_children(IFTGraphNode tree_root) {

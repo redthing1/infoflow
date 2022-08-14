@@ -184,36 +184,17 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
             writefln("   verts: %s", ift.ift_graph.num_verts);
             writefln("   edges: %s", ift.ift_graph.num_edges);
 
-            // // go through all ift tree roots
-            // foreach (tree_root; ift.ift_graphs) {
-            //     // do a depth-first traversal
+            // dump all ift subtrees
+            writefln(" dependency subtrees:");
+            foreach (subtree; ift.ift_subtrees) {
+                import std.array: split;
 
-            //     struct TreeNodeWalk {
-            //         IFTGraphNode tree;
-            //         int depth;
-            //     }
-
-            //     auto stack = DList!TreeNodeWalk();
-            //     stack.insertFront(TreeNodeWalk(tree_root, 0));
-
-            //     while (!stack.empty) {
-            //         auto curr_walk = stack.front;
-            //         stack.removeFront();
-
-            //         // visit and print
-            //         // indent
-            //         for (auto i = 0; i < curr_walk.depth; i++) {
-            //             writef("  ");
-            //         }
-            //         // print node
-            //         writefln("%s", curr_walk.tree);
-
-            //         // push children
-            //         foreach (child; curr_walk.tree.children) {
-            //             stack.insertFront(TreeNodeWalk(child, curr_walk.depth + 1));
-            //         }
-            //     }
-            // }
+                writefln("  subtree for: %s", subtree.node);
+                auto subtree_dump = subtree.dump();
+                foreach (line; subtree_dump.split("\n")) {
+                    writefln("  %s", line);
+                }
+            }
         }
 
         void export_graph_to(string output) {
@@ -244,7 +225,7 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
             }
 
             g.save(output);
-            writefln(" wrote graphviz data to %s", output);
+            writefln("  wrote graphviz data to %s", output);
         }
 
         void dump_summary() {
