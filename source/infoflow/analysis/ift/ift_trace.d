@@ -177,28 +177,44 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             return clobber;
         }
 
-        struct CommitEffectIndexItem {
+        struct CommitCacheInfoKey {
             InfoType type;
             TRegWord data;
         }
-        alias CommitEffectIndexItems = CommitEffectIndexItem[];
-        CommitEffectIndexItems[ulong] commit_effect_index_cache;
+        struct CommitEffectIndexItem {
+            CommitCacheInfoKey[] effect_keys;
+        }
+        CommitEffectIndexItem[ulong] commit_effect_index_cache;
+        struct CommitEffectTouchersItem {
+            ulong[] commit_ids;
+        }
+        CommitEffectTouchersItem[CommitCacheInfoKey] commit_effect_touchers_cache;
 
         void calculate_commit_indexes() {
             // create indexes for the commit trace so it's easy to find who last touched a given register or memory
             foreach (i, commit; trace.commits) {
-                CommitEffectIndexItems commit_index_items;
+                CommitCacheInfoKey[] commit_effect_keys;
                 // for each effect
                 foreach (j, effect; commit.effects) {
+                    auto info_key = CommitCacheInfoKey(effect.type, effect.data);
+
                     // add the effect to the index
-                    commit_index_items ~= CommitEffectIndexItem(effect.type, effect.data);
+                    commit_effect_keys ~= info_key;
+
+                    // try adding to touchers cache
+                    if (info_key !in commit_effect_touchers_cache) {
+                        commit_effect_touchers_cache[info_key] = CommitEffectTouchersItem();
+                    }
+                    commit_effect_touchers_cache[info_key].commit_ids ~= i;
                 }
 
                 // save the index
-                commit_effect_index_cache[i] = commit_index_items;
+                commit_effect_index_cache[i] = CommitEffectIndexItem(commit_effect_keys);
 
-                // writefln("saved index for commit #%d: %s", i, commit_index_items);
+                // writefln("saved effect keys for commit #%d: %s", i, commit_effect_keys);
             }
+
+            // writefln("info key toucher cache: %s", commit_effect_touchers_cache);
         }
 
         long find_last_commit_at_pc(TRegWord pc_val, long from_commit) {
