@@ -349,16 +349,16 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 Nullable!IFTGraphNode parent;
 
-                size_t toHash() const @safe nothrow {
-                    size_t hash;
+                // size_t toHash() const @safe nothrow {
+                //     size_t hash;
                     
-                    hash += typeid(node).getHash(&node);
-                    hash += typeid(owner_commit_ix).getHash(&owner_commit_ix);
-                    hash += typeid(walk_commit_ix).getHash(&walk_commit_ix);
-                    hash += typeid(parent).getHash(&parent);
+                //     hash += typeid(node).getHash(&node);
+                //     hash += typeid(owner_commit_ix).getHash(&owner_commit_ix);
+                //     hash += typeid(walk_commit_ix).getHash(&walk_commit_ix);
+                //     hash += typeid(parent).getHash(&parent);
 
-                    return hash;
-                }
+                //     return hash;
+                // }
             }
 
             auto unvisited = DList!InfoNodeWalk();
