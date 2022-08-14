@@ -188,10 +188,12 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
             writefln(" dependency subtrees:");
             foreach (subtree; ift.ift_subtrees) {
                 import std.array: split;
+                import std.string: strip;
 
                 writefln("  subtree for: %s", subtree.node);
                 auto subtree_dump = subtree.dump();
                 foreach (line; subtree_dump.split("\n")) {
+                    if (line.strip().length == 0) break;
                     writefln("  %s", line);
                 }
             }
