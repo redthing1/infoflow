@@ -429,12 +429,16 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         // the fast-track path: we've already visited this node, which implies we've already fully walked its hierarchy
                         // so we can pull its hierarchy from the cache, if it's available
 
+                        // NOTE: when aggressively skipping revisits, that means another backtrace visited this node, and thus all its children
+                        // if we simply skip it, we won't include all the children in the terminals of this backtrace
+                        // but if we are just building the graph, then this is no problem
+
                         // TODO: get the cached terminal leaves from the cache ???
-                        // for now, just skip this iteration
 
                         mixin(LOG_DEBUG!(
                                 `format("   skipping revisit, already visited globally")`));
 
+                        // for now, just skip this iteration
                         continue;
                     }
                 } else {
