@@ -97,13 +97,28 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             }
         }
 
+        alias GraphEdges = IFTGraphEdge[];
+        GraphEdges[IFTGraphNode] _node_neighbors_from_cache;
+        GraphEdges[IFTGraphNode] _node_neighbors_to_cache;
+
         void add_edge(IFTGraphEdge edge) {
             // // ensure no duplicate exists
             // enforce(!_find_edge_cache(edge), format("attempt to add duplicate edge: %s", edge));
 
             edges ~= edge;
+
             // cache it
             _store_edge_cache(edge, true);
+            
+            // add to the neighbor lists
+            if (edge.src !in _node_neighbors_from_cache) {
+                _node_neighbors_from_cache[edge.src] = [];
+            }
+            _node_neighbors_from_cache[edge.src] ~= edge;
+            if (edge.dst !in _node_neighbors_to_cache) {
+                _node_neighbors_to_cache[edge.dst] = [];
+            }
+            _node_neighbors_to_cache[edge.dst] ~= edge;
         }
 
         IFTGraphEdge get_edge_ix(ulong index) {
@@ -118,12 +133,12 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             return filter!(edge => edge.dst == node)(edges);
         }
 
-        alias GraphEdges = IFTGraphEdge[];
-        GraphEdges[IFTGraphNode] _node_neighbors_from_cache;
-        GraphEdges[IFTGraphNode] _node_neighbors_to_cache;
-
-        void build_neighbors_cache() {
+        void rebuild_neighbors_cache() {
             import std.parallelism: parallel;
+
+            // clear the caches
+            _node_neighbors_from_cache.clear();
+            _node_neighbors_to_cache.clear();
 
             // for each node, build a list of neighbors, pointing to and from
             // for (size_t i = 0; i < nodes.length; i++) {
