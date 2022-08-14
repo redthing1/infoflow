@@ -98,8 +98,8 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
         }
 
         void add_edge(IFTGraphEdge edge) {
-            // ensure no duplicate exists
-            enforce(!_find_edge_cache(edge), format("attempt to add duplicate edge: %s", edge));
+            // // ensure no duplicate exists
+            // enforce(!_find_edge_cache(edge), format("attempt to add duplicate edge: %s", edge));
 
             edges ~= edge;
             // cache it

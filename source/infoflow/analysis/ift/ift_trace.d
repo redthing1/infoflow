@@ -46,6 +46,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             shared long log_graph_nodes_walked;
             shared long log_graph_nodes_cache_hits;
             shared long log_graph_nodes_cache_misses;
+
+            shared bool[InfoNodeWalk] log_global_node_walk_visited;
+            shared long log_global_node_walk_duplicates;
         }
         ulong log_analysis_time;
 
@@ -330,6 +333,26 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             assert(0);
         }
 
+        struct InfoNodeWalk {
+            InfoNode node;
+            // long commit_ix;
+            long owner_commit_ix; // which commit this infonode is in
+            long walk_commit_ix; // which commit to walk this back from
+
+            Nullable!IFTGraphNode parent;
+
+            // size_t toHash() const @safe nothrow {
+            //     size_t hash;
+                
+            //     hash += typeid(node).getHash(&node);
+            //     hash += typeid(owner_commit_ix).getHash(&owner_commit_ix);
+            //     hash += typeid(walk_commit_ix).getHash(&walk_commit_ix);
+            //     hash += typeid(parent).getHash(&parent);
+
+            //     return hash;
+            // }
+        }
+
         InfoLeaf[] backtrace_information_flow(InfoNode last_node) {
             mixin(LOG_INFO!(`format("backtracking information flow for node: %s", last_node)`));
 
@@ -338,28 +361,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 find_commit_last_touching(last_node, last_commit_ix);
             // writefln("found last touching commit (#%s) for node: %s: %s",
             //     last_node_last_touch_ix, last_node, trace.commits[last_node_last_touch_ix]);
-
-            // 2. data structures for dfs
-
-            struct InfoNodeWalk {
-                InfoNode node;
-                // long commit_ix;
-                long owner_commit_ix; // which commit this infonode is in
-                long walk_commit_ix; // which commit to walk this back from
-
-                Nullable!IFTGraphNode parent;
-
-                // size_t toHash() const @safe nothrow {
-                //     size_t hash;
-                    
-                //     hash += typeid(node).getHash(&node);
-                //     hash += typeid(owner_commit_ix).getHash(&owner_commit_ix);
-                //     hash += typeid(walk_commit_ix).getHash(&walk_commit_ix);
-                //     hash += typeid(parent).getHash(&parent);
-
-                //     return hash;
-                // }
-            }
 
             auto unvisited = DList!InfoNodeWalk();
             bool[InfoNodeWalk] visited;
@@ -371,7 +372,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 long graph_nodes_cache_hits_acc = 0;
                 long graph_nodes_cache_misses_acc = 0;
             }
-
 
             auto terminal_leaves = appender!(InfoLeaf[]);
 
@@ -402,6 +402,14 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 // mark as visited
                 unvisited.removeFront();
                 visited[curr] = true;
+
+                version (analysis_log) {
+                    if (curr in log_global_node_walk_visited) {
+                        atomicOp!"+="(this.log_global_node_walk_duplicates, 1);
+                    } else {
+                        synchronized { log_global_node_walk_visited[curr] = true; }
+                    }
+                }
 
                 mixin(LOG_DEBUG!(
                         `format("  visiting: node: %s (#%s), walk: %s", curr.node, curr.owner_commit_ix, curr.walk_commit_ix)`));

@@ -271,6 +271,9 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                 writefln("  walked graph nodes:     %8d", ift.log_graph_nodes_walked);
                 writefln("  graph cache hits:       %8d", ift.log_graph_nodes_cache_hits);
                 writefln("  graph cache misses:     %8d", ift.log_graph_nodes_cache_misses);
+
+                writefln("  node walk duplicates:   %8d", ift.log_global_node_walk_duplicates);
+
             }
             writefln("  analysis time:          %7ss", (
                     cast(double) ift.log_analysis_time / 1_000_000));
