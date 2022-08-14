@@ -418,7 +418,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     
                     // use a cache so that we don't create duplicate vertices
                     IFTGraphNode curr_graph_vert;
-                    auto cached_graph_vert = ift_graph.find_cached(curr.owner_commit_ix, curr.node);
+                    // auto cached_graph_vert = ift_graph.find_cached(curr.owner_commit_ix, curr.node);
+                    auto cached_graph_vert = ift_graph.find_in_cache(curr.owner_commit_ix, curr.node);
                     if (cached_graph_vert) {
                     // if (likely(cached_graph_vert !is null)) {
                         curr_graph_vert = cached_graph_vert;
