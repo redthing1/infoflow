@@ -85,6 +85,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
             // calculate diffs and clobber
             calculate_clobber();
+            calculate_commit_indexes();
             analyze_flows();
 
             MonoTime tmr_end = MonoTime.currTime;
@@ -174,6 +175,30 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             return clobber;
+        }
+
+        struct CommitEffectIndexItem {
+            InfoType type;
+            TRegWord data;
+        }
+        alias CommitEffectIndexItems = CommitEffectIndexItem[];
+        CommitEffectIndexItems[ulong] commit_effect_index_cache;
+
+        void calculate_commit_indexes() {
+            // create indexes for the commit trace so it's easy to find who last touched a given register or memory
+            foreach (i, commit; trace.commits) {
+                CommitEffectIndexItems commit_index_items;
+                // for each effect
+                foreach (j, effect; commit.effects) {
+                    // add the effect to the index
+                    commit_index_items ~= CommitEffectIndexItem(effect.type, effect.data);
+                }
+
+                // save the index
+                commit_effect_index_cache[i] = commit_index_items;
+
+                // writefln("saved index for commit #%d: %s", i, commit_index_items);
+            }
         }
 
         long find_last_commit_at_pc(TRegWord pc_val, long from_commit) {
