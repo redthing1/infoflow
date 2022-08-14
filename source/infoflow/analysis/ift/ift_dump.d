@@ -86,8 +86,11 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
         void dump_analysis() {
             import std.array : appender;
 
+            writefln("\nanalysis:");
+
             // dump backtraces
-            writefln(" backtraces:");
+            // writefln(" backtraces:");
+            mixin(LOG_TRACE!(`"backtraces:"`));
 
             bool[long] minimal_commit_set;
 
