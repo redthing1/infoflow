@@ -447,6 +447,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             // 3. queue our initial node
+            // this is the last node, and we'll queue it initially with itself as is parent
             unvisited.insertFront(
                 InfoNodeWalk(last_node, last_node_last_touch_ix, last_node_last_touch_ix, maybe_last_node_vert));
 
@@ -562,7 +563,16 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 // create an inner node in the graph for this commit
                 Nullable!IFTGraphNode maybe_curr_graph_vert;
                 if (enable_ift_graph) {
-                    maybe_curr_graph_vert = create_graph_vert(curr.parent.get(), curr.node, touching_commit_ix);
+                    auto parent = curr.parent.get();
+                    auto vert_commit_id = touching_commit_ix;
+
+                    // ensure parent is not the same as the current node: if it is make sure we don't create a cycle
+                    if (parent.info_view.node != curr.node && parent.info_view.commit_id != vert_commit_id) {
+                        maybe_curr_graph_vert = create_graph_vert(parent, curr.node, vert_commit_id);
+                    } else {
+                        mixin(LOG_DEBUG!(`format("    parent is same as current node, skipping adding vert")`));
+                        maybe_curr_graph_vert = parent;
+                    }
                 }
 
                 // get all dependencies of this commit
