@@ -137,10 +137,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // 3. do a reverse pass through all commits, looking for special cases
             //    things like devices and mmio, external sources of data
 
+            long commits_walked_acc = 0;
             for (auto i = last_commit_ix; i >= 0; i--) {
                 auto commit = trace.commits[i];
-                version (analysis_log)
-                    atomicOp!"+="(this.log_commits_walked, 1);
+                commits_walked_acc++;
 
                 // look at sources of this commit
                 for (auto j = 0; j < commit.sources.length; j++) {
@@ -173,6 +173,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     }
                 }
             }
+
+            version (analysis_log)
+                atomicOp!"+="(this.log_commits_walked, commits_walked_acc);
 
             return clobber;
         }
@@ -217,18 +220,18 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // writefln("info key toucher cache: %s", commit_effect_touchers_cache);
         }
 
-        long find_last_commit_at_pc(TRegWord pc_val, long from_commit) {
-            for (auto i = from_commit; i >= 0; i--) {
-                auto commit = &trace.commits[i];
-                version (analysis_log)
-                    atomicOp!"+="(this.log_commits_walked, 1);
-                if (commit.pc == pc_val) {
-                    return i;
-                }
-            }
+        // long find_last_commit_at_pc(TRegWord pc_val, long from_commit) {
+        //     for (auto i = from_commit; i >= 0; i--) {
+        //         auto commit = &trace.commits[i];
+        //         version (analysis_log)
+        //             atomicOp!"+="(this.log_commits_walked, 1);
+        //         if (commit.pc == pc_val) {
+        //             return i;
+        //         }
+        //     }
 
-            return -1; // none found
-        }
+        //     return -1; // none found
+        // }
 
         long find_commit_last_touching(InfoNode node, long from_commit) {
             pragma(inline, true) long find_last_touch_with_caches(CommitCacheInfoKey info_key) {
@@ -350,12 +353,21 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             auto unvisited = DList!InfoNodeWalk();
             bool[InfoNodeWalk] visited;
 
+            version (analysis_log) {
+                long found_sources_acc = 0;
+                long visited_info_nodes_acc = 0;
+                long graph_nodes_walked_acc = 0;
+                long graph_nodes_cache_hits_acc = 0;
+                long graph_nodes_cache_misses_acc = 0;
+            }
+
+
             auto terminal_leaves = appender!(InfoLeaf[]);
 
             pragma(inline, true) void add_info_leaf(InfoLeaf leaf) {
                 terminal_leaves ~= leaf;
                 version (analysis_log)
-                    atomicOp!"+="(this.log_found_sources, 1);
+                    found_sources_acc++;
             }
 
             Nullable!IFTGraphNode maybe_last_node_vert;
@@ -383,7 +395,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 mixin(LOG_TRACE!(
                         `format("  visiting: node: %s (#%s), walk: %s", curr.node, curr.owner_commit_ix, curr.walk_commit_ix)`));
                 version (analysis_log)
-                    atomicOp!"+="(this.log_visited_info_nodes, 1);
+                    visited_info_nodes_acc++;
 
                 Nullable!IFTGraphNode maybe_curr_graph_vert;
 
@@ -391,7 +403,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // create a graph vert for this commit
                     
                     version (analysis_log)
-                        atomicOp!"+="(this.log_graph_nodes_walked, 1);
+                        graph_nodes_walked_acc++;
                     
                     // use a cache so that we don't create duplicate vertices
                     IFTGraphNode curr_graph_vert;
@@ -400,13 +412,13 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         curr_graph_vert = cached_graph_vert;
                         
                         version (analysis_log)
-                            atomicOp!"+="(this.log_graph_nodes_cache_hits, 1);
+                            graph_nodes_cache_hits_acc++;
                     } else {
                         curr_graph_vert = new IFTGraphNode(InfoView(curr.node, curr.owner_commit_ix));
                         ift_graph.add_node(curr_graph_vert);
 
                         version (analysis_log)
-                            atomicOp!"+="(this.log_graph_nodes_cache_misses, 1);
+                            graph_nodes_cache_misses_acc++;
                     }
                     // connect ourselves to our parent (parent comes in the future, so edge us -> parent)
                     auto parent_vert = curr.parent.get;
@@ -508,6 +520,14 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         // mixin(LOG_TRACE!(`format("     queued walk: %s", dep_walk)`));
                     }
                 }
+            }
+
+            version (analysis_log) {
+                atomicOp!"+="(this.log_found_sources, found_sources_acc);
+                atomicOp!"+="(this.log_visited_info_nodes, visited_info_nodes_acc);
+                atomicOp!"+="(this.log_graph_nodes_walked, graph_nodes_walked_acc);
+                atomicOp!"+="(this.log_graph_nodes_cache_hits, graph_nodes_cache_hits_acc);
+                atomicOp!"+="(this.log_graph_nodes_cache_misses, graph_nodes_cache_misses_acc);
             }
 
             // if (enable_ift_graph) {
