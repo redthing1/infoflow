@@ -625,24 +625,26 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             return terminal_leaves_ids.data;
         }
 
+        alias SubtreeSearchWalkCache = IFTGraphSubtree[SubtreeSearchWalk];
+        SubtreeSearchWalkCache _subtree_search_walk_cache;
+        struct SubtreeSearchWalk {
+            IFTGraphNode node;
+            size_t depth;
+            IFTGraphSubtree parent;
+        }
+
         IFTGraphSubtree find_graph_node_dependency_subtree(IFTGraphNode node_root) {
             // the node root is the final endpoint of the subtree
             // we want to search upward and find all the inner and leaf nodes
 
-            struct GraphSubtreeWalk {
-                IFTGraphNode node;
-                size_t depth;
-                Nullable!IFTGraphSubtree parent;
-            }
-
             // we can do an iterative depth-first search
-            auto unvisited = DList!GraphSubtreeWalk();
-            bool[GraphSubtreeWalk] visited;
+            auto unvisited = DList!SubtreeSearchWalk();
+            bool[SubtreeSearchWalk] visited;
 
             auto root_subtree = new IFTGraphSubtree(node_root);
 
             // add initial node to the unvisited list
-            unvisited.insertFront(GraphSubtreeWalk(node_root, 0, Nullable!IFTGraphSubtree(root_subtree)));
+            unvisited.insertFront(SubtreeSearchWalk(node_root, 0, root_subtree));
 
             mixin(LOG_DEBUG!(`format(" building dependency subtree for node: %s", node_root)`));
 
@@ -654,20 +656,36 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 unvisited.removeFront();
                 visited[curr] = true;
 
+                if (aggressive_revisit_skipping) {
+                    // we have aggressive skipping enabled, use the search walk cache
+                    if (curr in _subtree_search_walk_cache) {
+                        // populate from cache
+                        auto cached = _subtree_search_walk_cache[curr];
+                        curr.parent.children ~= new IFTGraphSubtree(cached.node);
+                        // writefln("hit cache for %s", curr);
+                        continue;
+                    }
+                }
+
                 mixin(LOG_DEBUG!(`format("  visiting node: %s", curr)`));
 
                 // add to subtree
-                Nullable!IFTGraphSubtree maybe_subtree_node;
-                if (!curr.parent.isNull) {
-                    auto parent = curr.parent.get();
-                    // ensure curr is not parent
-                    if (curr.node != parent.node) {
-                        auto tree_node = new IFTGraphSubtree(curr.node);
-                        parent.children ~= tree_node;
-                        maybe_subtree_node = tree_node;
-                    } else {
-                        maybe_subtree_node = parent;
+                IFTGraphSubtree subtree_node;
+                // ensure curr is not parent
+                if (curr.node != curr.parent.node) {
+                    auto tree_node = new IFTGraphSubtree(curr.node);
+                    curr.parent.children ~= tree_node;
+                    subtree_node = tree_node;
+                } else {
+                    subtree_node = curr.parent;
+                }
+
+                if (aggressive_revisit_skipping) {
+                    // add to cache
+                    synchronized {
+                        _subtree_search_walk_cache[curr] = subtree_node;
                     }
+                    // _subtree_search_walk_cache[curr] = subtree_node;
                 }
 
                 // get all dependencies: which are nodes that point to this one
@@ -681,7 +699,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     enforce(dep.src != curr.node,
                         format("found loop in dependency subtree between %s and %s", curr.node, dep.src));
 
-                    auto dep_walk = GraphSubtreeWalk(dep.src, curr.depth + 1, maybe_subtree_node);
+                    auto dep_walk = SubtreeSearchWalk(dep.src, curr.depth + 1, subtree_node);
                     // NOTE: a node can be queued multiple times at different depths
 
                     // if we have not visited this dependency yet, add it to the unvisited list
