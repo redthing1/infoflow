@@ -123,12 +123,23 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
         GraphEdges[IFTGraphNode] _node_neighbors_to_cache;
 
         void build_neighbors_cache() {
-            // for each node, build a list of neighbors, pointing to and from
-            for (size_t i = 0; i < nodes.length; i++) {
-                IFTGraphNode node = nodes[i];
+            import std.parallelism: parallel;
 
-                _node_neighbors_from_cache[node] = filter_edges_from(node).array;
-                _node_neighbors_to_cache[node] = filter_edges_to(node).array;
+            // for each node, build a list of neighbors, pointing to and from
+            // for (size_t i = 0; i < nodes.length; i++) {
+            //     IFTGraphNode node = nodes[i];
+
+            //     _node_neighbors_from_cache[node] = filter_edges_from(node).array;
+            //     _node_neighbors_to_cache[node] = filter_edges_to(node).array;
+            // }
+            foreach (i, node; parallel(nodes)) {
+                auto edges_from = filter_edges_from(node).array;
+                auto edges_to = filter_edges_to(node).array;
+
+                synchronized (this) {
+                    _node_neighbors_from_cache[node] = edges_from;
+                    _node_neighbors_to_cache[node] = edges_to;
+                }
             }
 
             _node_neighbors_from_cache.rehash();
