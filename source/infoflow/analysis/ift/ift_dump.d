@@ -86,7 +86,11 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
             // dump backtraces
             writefln(" backtraces:");
 
+            bool[long] minimal_commit_set;
+
             void log_commit_for_source(InfoLeaf source) {
+                minimal_commit_set[source.commit_id] = true;
+
                 writef("   %s", source);
                 if (source.commit_id >= 0) {
                     auto commit = ift.trace.commits[source.commit_id];
@@ -136,6 +140,13 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                     log_commit_for_source(source);
                 }
             }
+
+            writefln(" theoritical minimization:");
+            auto num_minimal_commits = minimal_commit_set.length;
+            writefln("  minimal commits: %s", num_minimal_commits);
+            writefln("  total commits: %s", ift.trace.commits.length);
+            writefln("  theoretical minimization: %.2f%%",
+                (100.0 * num_minimal_commits) / ift.trace.commits.length);
         }
 
         void dump_graph() {
