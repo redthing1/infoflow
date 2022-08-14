@@ -5,7 +5,7 @@ import std.typecons;
 import std.array : appender, array;
 import infoflow.analysis.common;
 import std.algorithm.iteration : map, filter, fold;
-import core.atomic: atomicOp;
+import core.atomic : atomicOp;
 import std.exception : enforce;
 
 import infoflow.util;
@@ -47,6 +47,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         InfoLeafIndices[TRegSet] clobbered_regs_sources;
         InfoLeafIndices[TRegWord] clobbered_mem_sources;
         InfoLeafIndices[TRegWord] clobbered_csr_sources;
+        IFTGraphNode[] final_graph_verts;
 
         version (analysis_log) {
             shared long log_visited_info_nodes;
@@ -98,6 +99,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             calculate_clobber();
             calculate_commit_indexes();
             analyze_flows();
+            if (enable_ift_graph && enable_ift_subtree) {
+                analyze_subtrees();
+            }
 
             MonoTime tmr_end = MonoTime.currTime;
             auto elapsed = tmr_end - tmr_start;
@@ -117,7 +121,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     if (snap_init.reg[reg_id] != snap_final.reg[reg_id]) {
                         // this TRegSet changed between the initial and final state
                         // store commit that clobbers this TRegSet
-                        clobber.effects ~= InfoNode(InfoType.Register, reg_id, snap_final.reg[reg_id]);
+                        clobber.effects ~= InfoNode(InfoType.Register, reg_id, snap_final
+                                .reg[reg_id]);
                     }
                 }
             }
@@ -129,7 +134,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         if (snap_init.get_mem(mem_addr) != snap_final.get_mem(mem_addr)) {
                             // this memory changed between the initial and final state
                             // store commit that clobbers this memory
-                            clobber.effects ~= InfoNode(InfoType.Memory, mem_addr, snap_final.get_mem(mem_addr));
+                            clobber.effects ~= InfoNode(InfoType.Memory, mem_addr, snap_final.get_mem(
+                                    mem_addr));
                         }
                     }
                 }
@@ -140,7 +146,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     if (snap_init.get_csr(csr_id) != snap_final.get_csr(csr_id)) {
                         // this CSR changed between the initial and final state
                         // store commit that clobbers this CSR
-                        clobber.effects ~= InfoNode(InfoType.CSR, csr_id, snap_final.get_csr(csr_id));
+                        clobber.effects ~= InfoNode(InfoType.CSR, csr_id, snap_final.get_csr(
+                                csr_id));
                     }
                 }
             }
@@ -195,13 +202,16 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             InfoType type;
             TRegWord data;
         }
+
         struct CommitEffectIndexItem {
             CommitCacheInfoKey[] effect_keys;
         }
+
         CommitEffectIndexItem[ulong] commit_effect_index_cache;
         struct CommitEffectTouchersItem {
             ulong[] commit_ids;
         }
+
         CommitEffectTouchersItem[CommitCacheInfoKey] commit_effect_touchers_cache;
 
         void calculate_commit_indexes() {
@@ -229,7 +239,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             // writefln("info key toucher cache: %s", commit_effect_touchers_cache);
-            
+
             // rehash maps
             commit_effect_index_cache.rehash();
             commit_effect_touchers_cache.rehash();
@@ -253,10 +263,11 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 // use the toucher cache to quickly find the last commit that touched this item
                 // we can simply binary search for the largest commit id that is below from_commit
 
-                if (info_key !in commit_effect_touchers_cache) return -1; // no known touchers for this item
+                if (info_key !in commit_effect_touchers_cache)
+                    return -1; // no known touchers for this item
 
                 auto cached_commit_ids = commit_effect_touchers_cache[info_key].commit_ids;
-                long cached_commit_ids_length = cached_commit_ids.length;                
+                long cached_commit_ids_length = cached_commit_ids.length;
                 enforce(cached_commit_ids_length > 0, "touchers cache should have at least one commit id");
 
                 // basic binary search for a suitable commit id
@@ -272,7 +283,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     }
                 }
 
-                if (cached_commit_ids_high < 0) return -1; // none found
+                if (cached_commit_ids_high < 0)
+                    return -1; // none found
 
                 // check if we found a suitable commit id
                 // writefln("bsearch results below %s in %s: %s %s", from_commit, cached_commit_ids, cached_commit_ids_low, cached_commit_ids_high);
@@ -355,7 +367,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
             // size_t toHash() const @safe nothrow {
             //     size_t hash;
-                
+
             //     hash += typeid(node).getHash(&node);
             //     hash += typeid(owner_commit_ix).getHash(&owner_commit_ix);
             //     hash += typeid(walk_commit_ix).getHash(&walk_commit_ix);
@@ -365,7 +377,12 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // }
         }
 
-        size_t[] backtrace_information_flow(InfoNode last_node) {
+        struct InformationFlowBacktrace {
+            size_t[] terminal_leaves;
+            Nullable!IFTGraphNode maybe_graph_vert;
+        }
+
+        InformationFlowBacktrace backtrace_information_flow(InfoNode last_node) {
             mixin(LOG_INFO!(`format("backtracking information flow for node: %s", last_node)`));
 
             // 1. get the commit corresponding to this node
@@ -393,7 +410,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 // create a graph vert for this commit
                 version (analysis_log)
                     graph_nodes_walked_acc++;
-                
+
                 // use a cache so that we don't create duplicate vertices
                 IFTGraphNode curr_graph_vert;
 
@@ -402,9 +419,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 auto cached_graph_vert = ift_graph.find_in_cache(commit_ix, curr_node);
                 if (cached_graph_vert) {
-                // if (likely(cached_graph_vert !is null)) {
+                    // if (likely(cached_graph_vert !is null)) {
                     curr_graph_vert = cached_graph_vert;
-                    
+
                     version (analysis_log)
                         graph_nodes_cache_hits_acc++;
                 } else {
@@ -417,8 +434,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 // connect ourselves to our parent (parent comes in the future, so edge us -> parent)
                 mixin(LOG_DEBUG!(
-                    `format("   adding graph edge: %s -> %s", curr_graph_vert, parent_vert)`));
-                
+                        `format("   adding graph edge: %s -> %s", curr_graph_vert, parent_vert)`));
+
                 ift_graph.add_edge(IFTGraphEdge(curr_graph_vert, parent_vert));
 
                 return curr_graph_vert;
@@ -436,7 +453,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 version (analysis_log)
                     found_sources_acc++;
-                
+
                 // add a leaf node to the graph
                 if (enable_ift_graph) {
                     enforce(!walk.parent.isNull, "walk.parent is null");
@@ -493,7 +510,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 } else {
                     // synchronized { global_node_walk_visited[curr] = true; }
                     global_node_walk_visited[curr] = true;
-                }      
+                }
 
                 version (analysis_log)
                     visited_info_nodes_acc++;
@@ -566,7 +583,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 auto touching_commit = trace.commits[touching_commit_ix];
                 mixin(LOG_DEBUG!(`format("   found last touching commit (#%s) for node: %s: %s",
                         touching_commit_ix, curr, touching_commit)`));
-                
+
                 // create an inner node in the graph for this commit
                 Nullable!IFTGraphNode maybe_curr_graph_vert;
                 if (enable_ift_graph) {
@@ -577,7 +594,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     if (parent.info_view.node != curr.node && parent.info_view.commit_id != vert_commit_id) {
                         maybe_curr_graph_vert = create_graph_vert(parent, curr.node, vert_commit_id);
                     } else {
-                        mixin(LOG_DEBUG!(`format("    parent is same as current node, skipping adding vert")`));
+                        mixin(LOG_DEBUG!(
+                                `format("    parent is same as current node, skipping adding vert")`));
                         maybe_curr_graph_vert = parent;
                     }
                 }
@@ -614,15 +632,17 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 atomicOp!"+="(this.log_global_node_walk_duplicates, node_walk_duplicates_acc);
             }
 
-            if (enable_ift_graph && enable_ift_subtree) {
-                auto dep_subtree = find_graph_node_dependency_subtree(maybe_last_node_vert.get);
+            // if (enable_ift_graph && enable_ift_subtree) {
+            //     auto dep_subtree = find_graph_node_dependency_subtree(maybe_last_node_vert.get);
 
-                // store subtree
-                ift_subtrees ~= dep_subtree;
-            }
+            //     // store subtree
+            //     ift_subtrees ~= dep_subtree;
+            // }
 
             // return terminal_leaves.data;
-            return terminal_leaves_ids.data;
+            // return terminal_leaves_ids.data;
+
+            return InformationFlowBacktrace(terminal_leaves_ids.data, maybe_last_node_vert);
         }
 
         // alias SubtreeSearchWalkCache = IFTGraphSubtree[SubtreeSearchWalk];
@@ -631,6 +651,128 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             IFTGraphNode node;
             size_t depth;
             IFTGraphSubtree parent;
+        }
+
+        void analyze_flows() {
+            import std.parallelism;
+
+            // 1. backtrace all clobbered registers
+            // queue work
+            InfoNode[] reg_last_nodes;
+            auto clobbered_reg_ids = clobber.get_effect_reg_ids().array;
+            auto clobbered_reg_values = clobber.get_effect_reg_values().array;
+            for (auto clobbered_i = 0; clobbered_i < clobbered_reg_ids.length; clobbered_i++) {
+                auto reg_id = clobbered_reg_ids[clobbered_i].to!TRegSet;
+                auto reg_val = clobbered_reg_values[clobbered_i];
+
+                // create an info node for this point
+                auto reg_last_node = InfoNode(InfoType.Register, reg_id, reg_val);
+                reg_last_nodes ~= reg_last_node;
+            }
+
+            // 2. backtrace all clobbered memory
+            // queue work
+            InfoNode[] mem_last_nodes;
+            auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
+            auto clobbered_mem_values = clobber.get_effect_mem_values().array;
+            for (auto clobbered_i = 0; clobbered_i < clobbered_mem_addrs.length; clobbered_i++) {
+                auto mem_addr = clobbered_mem_addrs[clobbered_i];
+                auto mem_val = clobbered_mem_values[clobbered_i];
+
+                // create an info node for this point
+                auto mem_last_node = InfoNode(InfoType.Memory, mem_addr, mem_val);
+                mem_last_nodes ~= mem_last_node;
+            }
+
+            // 3. backtrace all clobbered csrs
+            // queue work
+            InfoNode[] csr_last_nodes;
+            auto clobbered_csr_ids = clobber.get_effect_csr_ids().array;
+            auto clobbered_csr_values = clobber.get_effect_csr_values().array;
+            for (auto clobbered_i = 0; clobbered_i < clobbered_csr_ids.length; clobbered_i++) {
+                auto csr_id = clobbered_csr_ids[clobbered_i];
+                auto csr_val = clobbered_csr_values[clobbered_i];
+
+                // create an info node for this point
+                auto csr_last_node = InfoNode(InfoType.CSR, csr_id, csr_val);
+                csr_last_nodes ~= csr_last_node;
+            }
+
+            pragma(inline, true) void log_found_sources(InfoLeaf[] sources) {
+                if (analysis_parallelized) {
+                    // assert(0, "log_found_sources should not be called when parallel enabled");
+                    return;
+                }
+
+                mixin(LOG_INFO!(
+                        `format(" sources found: %s", sources.length)`));
+            }
+
+            pragma(inline, true) void do_reg_trace(InfoNode last_node) {
+                // auto reg_sources = backtrace_information_flow(last_node);
+                // log_found_sources(reg_sources);
+                // clobbered_regs_sources[cast(TRegSet) last_node.data] = reg_sources;
+                auto reg_backtrace = backtrace_information_flow(last_node);
+                clobbered_regs_sources[cast(TRegSet) last_node.data] = reg_backtrace
+                    .terminal_leaves;
+
+                if (ift_graph) {
+                    final_graph_verts ~= reg_backtrace.maybe_graph_vert.get;
+                }
+            }
+
+            pragma(inline, true) void do_mem_trace(InfoNode last_node) {
+                // auto mem_sources = backtrace_information_flow(last_node);
+                // log_found_sources(mem_sources);
+                // clobbered_mem_sources[last_node.data] = mem_sources;
+                auto mem_backtrace = backtrace_information_flow(last_node);
+                clobbered_mem_sources[last_node.data] = mem_backtrace.terminal_leaves;
+
+                if (ift_graph) {
+                    final_graph_verts ~= mem_backtrace.maybe_graph_vert.get;
+                }
+            }
+
+            pragma(inline, true) void do_csr_trace(InfoNode last_node) {
+                // auto csr_sources = backtrace_information_flow(last_node);
+                // log_found_sources(csr_sources);
+                // clobbered_csr_sources[last_node.data] = csr_sources;
+                auto csr_backtrace = backtrace_information_flow(last_node);
+                clobbered_csr_sources[last_node.data] = csr_backtrace.terminal_leaves;
+
+                if (ift_graph) {
+                    final_graph_verts ~= csr_backtrace.maybe_graph_vert.get;
+                }
+            }
+
+            // select serial/parallel task
+            // do work
+
+            auto gen_analyze_work_loops()() {
+                auto sb = appender!string;
+
+                enum TRACE_ITEMS = ["reg", "mem", "csr"];
+                foreach (item; TRACE_ITEMS) {
+                    auto work_loop = format(`
+                        foreach (last_node; %s_last_nodes) {
+                            do_%s_trace(last_node);
+                        }
+                    `, item, item);
+                    sb ~= format(`
+                        if (analysis_parallelized) {
+                            auto %s_last_nodes_work = parallel(%s_last_nodes);
+                            %s
+                        } else {
+                            auto %s_last_nodes_work = %s_last_nodes;
+                            %s
+                        }
+                    `, item, item, work_loop, item, item, work_loop);
+                }
+
+                return sb.data;
+            }
+
+            mixin(gen_analyze_work_loops!());
         }
 
         IFTGraphSubtree find_graph_node_dependency_subtree(IFTGraphNode node_root) {
@@ -697,7 +839,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                     // check if the dependency is a loop
                     enforce(dep.src != curr.node,
-                        format("found loop in dependency subtree between %s and %s", curr.node, dep.src));
+                        format("found loop in dependency subtree between %s and %s", curr.node, dep
+                            .src));
 
                     auto dep_walk = SubtreeSearchWalk(dep.src, curr.depth + 1, subtree_node);
                     // NOTE: a node can be queued multiple times at different depths
@@ -717,177 +860,14 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             return root_subtree;
         }
 
-        // void analyze_tree_children(IFTGraphNode tree_root) {
-        //     // now do a post order traversal of the tree
-        //     auto tree_po_s = DList!IFTGraphNode();
-        //     auto tree_po_path = DList!IFTGraphNode();
-
-        //     tree_po_s.insertFront(tree_root); // push root onto stack
-        //     while (!tree_po_s.empty) {
-        //         auto root = tree_po_s.front;
-
-        //         if (!tree_po_path.empty && tree_po_path.front == root) {
-        //             // both are equal, so we can pop from both
-
-        //             if (root.children.length > 0) {
-        //                 // this is an inner node, update hierarchy final/deterministic flags
-
-        //                 auto all_children_final = true;
-        //                 auto all_children_deterministic = true;
-
-        //                 auto some_children_final = false;
-        //                 auto some_children_deterministic = false;
-
-        //                 for (auto i = 0; i < root.children.length; i++) {
-        //                     if (!some_children_final && root.children[i].hierarchy_some_final) {
-        //                         // we found a child that has some final
-        //                         some_children_final = true;
-        //                     }
-        //                     if (!some_children_deterministic && root
-        //                         .children[i].hierarchy_some_deterministic) {
-        //                         // we found a child that has some deterministic
-        //                         some_children_deterministic = true;
-        //                     }
-
-        //                     if (all_children_final && !root.children[i].hierarchy_all_final) {
-        //                         // we found a child that does not have all final
-        //                         all_children_final = false;
-        //                     }
-        //                     if (all_children_deterministic && !root
-        //                         .children[i].hierarchy_all_deterministic) {
-        //                         // we found a child that does not have all deterministic
-        //                         all_children_deterministic = false;
-        //                     }
-        //                 }
-        //                 root.hierarchy_some_final = some_children_final;
-        //                 root.hierarchy_some_deterministic = some_children_deterministic;
-        //                 root.hierarchy_all_final = all_children_final;
-        //                 root.hierarchy_all_deterministic = all_children_deterministic;
-        //             }
-
-        //             tree_po_s.removeFront();
-        //             tree_po_path.removeFront();
-        //         } else {
-        //             // push onto path
-        //             tree_po_path.insertFront(root);
-
-        //             // push children in reverse order
-        //             for (auto i = cast(long)(root.children.length) - 1; i >= 0;
-        //                 i--) {
-        //                 auto child = root.children[i];
-        //                 tree_po_s.insertFront(child);
-        //             }
-        //         }
-        //     }
-        // }
-
-        void analyze_flows() {
-            import std.parallelism;
-
-            // 1. backtrace all clobbered registers
-            // queue work
-            InfoNode[] reg_last_nodes;
-            auto clobbered_reg_ids = clobber.get_effect_reg_ids().array;
-            auto clobbered_reg_values = clobber.get_effect_reg_values().array;
-            for (auto clobbered_i = 0; clobbered_i < clobbered_reg_ids.length; clobbered_i++) {
-                auto reg_id = clobbered_reg_ids[clobbered_i].to!TRegSet;
-                auto reg_val = clobbered_reg_values[clobbered_i];
-
-                // create an info node for this point
-                auto reg_last_node = InfoNode(InfoType.Register, reg_id, reg_val);
-                reg_last_nodes ~= reg_last_node;
-            }
-
-            // 2. backtrace all clobbered memory
-            // queue work
-            InfoNode[] mem_last_nodes;
-            auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
-            auto clobbered_mem_values = clobber.get_effect_mem_values().array;
-            for (auto clobbered_i = 0; clobbered_i < clobbered_mem_addrs.length; clobbered_i++) {
-                auto mem_addr = clobbered_mem_addrs[clobbered_i];
-                auto mem_val = clobbered_mem_values[clobbered_i];
-
-                // create an info node for this point
-                auto mem_last_node = InfoNode(InfoType.Memory, mem_addr, mem_val);
-                mem_last_nodes ~= mem_last_node;
-            }
-
-            // 3. backtrace all clobbered csrs
-            // queue work
-            InfoNode[] csr_last_nodes;
-            auto clobbered_csr_ids = clobber.get_effect_csr_ids().array;
-            auto clobbered_csr_values = clobber.get_effect_csr_values().array;
-            for (auto clobbered_i = 0; clobbered_i < clobbered_csr_ids.length; clobbered_i++) {
-                auto csr_id = clobbered_csr_ids[clobbered_i];
-                auto csr_val = clobbered_csr_values[clobbered_i];
-
-                // create an info node for this point
-                auto csr_last_node = InfoNode(InfoType.CSR, csr_id, csr_val);
-                csr_last_nodes ~= csr_last_node;
-            }
-
-            pragma(inline, true) void log_found_sources(InfoLeaf[] sources) {
-                if (analysis_parallelized) {
-                    // assert(0, "log_found_sources should not be called when parallel enabled");
-                    return;
-                }
-
-                mixin(LOG_INFO!(
-                        `format(" sources found: %s", sources.length)`));
-            }
-
-            pragma(inline, true) void do_reg_trace(InfoNode last_node) {
-                // auto reg_sources = backtrace_information_flow(last_node);
-                // log_found_sources(reg_sources);
-                // clobbered_regs_sources[cast(TRegSet) last_node.data] = reg_sources;
-                auto reg_source_ids = backtrace_information_flow(last_node);
-                clobbered_regs_sources[cast(TRegSet) last_node.data] = reg_source_ids;
-            }
-
-            pragma(inline, true) void do_mem_trace(InfoNode last_node) {
-                // auto mem_sources = backtrace_information_flow(last_node);
-                // log_found_sources(mem_sources);
-                // clobbered_mem_sources[last_node.data] = mem_sources;
-                auto mem_source_ids = backtrace_information_flow(last_node);
-                clobbered_mem_sources[last_node.data] = mem_source_ids;
-            }
-
-            pragma(inline, true) void do_csr_trace(InfoNode last_node) {
-                // auto csr_sources = backtrace_information_flow(last_node);
-                // log_found_sources(csr_sources);
-                // clobbered_csr_sources[last_node.data] = csr_sources;
-                auto csr_sources = backtrace_information_flow(last_node);
-                clobbered_csr_sources[last_node.data] = csr_sources;
-            }
-
-            // select serial/parallel task
-            // do work
-            
-            auto gen_analyze_work_loops()() {
-                auto sb = appender!string;
+        void analyze_subtrees() {
+            foreach (final_vert; final_graph_verts) {
+                // analyze the subtree from this vert
+                auto dep_subtree = find_graph_node_dependency_subtree(final_vert);
                 
-                enum TRACE_ITEMS = ["reg", "mem", "csr"];
-                foreach (item; TRACE_ITEMS) {
-                    auto work_loop = format(`
-                        foreach (last_node; %s_last_nodes) {
-                            do_%s_trace(last_node);
-                        }
-                    `, item, item);
-                    sb ~= format(`
-                        if (analysis_parallelized) {
-                            auto %s_last_nodes_work = parallel(%s_last_nodes);
-                            %s
-                        } else {
-                            auto %s_last_nodes_work = %s_last_nodes;
-                            %s
-                        }
-                    `, item, item, work_loop, item, item, work_loop);
-                }
-
-                return sb.data;
+                // store subtree
+                ift_subtrees ~= dep_subtree;
             }
-
-            mixin(gen_analyze_work_loops!());
         }
     }
 }
