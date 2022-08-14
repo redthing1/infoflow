@@ -36,6 +36,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         bool enable_ift_graph = false;
         IFTGraph ift_graph = new IFTGraph();
 
+        bool aggressive_revisit_skipping = false;
         shared bool[InfoNodeWalk] global_node_walk_visited;
         shared InfoLeaf[] global_info_leafs_buffer;
 
@@ -417,23 +418,30 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 unvisited.removeFront();
                 visited[curr] = true;
 
+                mixin(LOG_DEBUG!(
+                        `format("  visiting: node: %s (#%s), walk: %s", curr.node, curr.owner_commit_ix, curr.walk_commit_ix)`));
+
                 if (curr in global_node_walk_visited) {
                     version (analysis_log)
                         node_walk_duplicates_acc++;
-                    
-                    // the fast-track path: we've already visited this node, which implies we've already fully walked its hierarchy
-                    // so we can pull its hierarchy from the cache, if it's available
 
-                    // TODO: get the cached terminal leaves from the cache ???
-                    // for now, just skip this iteration
-                    continue;
+                    if (aggressive_revisit_skipping) {
+                        // the fast-track path: we've already visited this node, which implies we've already fully walked its hierarchy
+                        // so we can pull its hierarchy from the cache, if it's available
+
+                        // TODO: get the cached terminal leaves from the cache ???
+                        // for now, just skip this iteration
+
+                        mixin(LOG_DEBUG!(
+                                `format("   skipping revisit, already visited globally")`));
+
+                        continue;
+                    }
                 } else {
                     // synchronized { global_node_walk_visited[curr] = true; }
                     global_node_walk_visited[curr] = true;
                 }      
 
-                mixin(LOG_DEBUG!(
-                        `format("  visiting: node: %s (#%s), walk: %s", curr.node, curr.owner_commit_ix, curr.walk_commit_ix)`));
                 version (analysis_log)
                     visited_info_nodes_acc++;
 
