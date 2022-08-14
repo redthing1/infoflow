@@ -38,6 +38,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
         bool enable_ift_graph = false;
         IFTGraph ift_graph = new IFTGraph();
+        shared bool[InfoNodeWalk] global_node_walk_visited;
 
         version (analysis_log) {
             shared long log_visited_info_nodes;
@@ -47,7 +48,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             shared long log_graph_nodes_cache_hits;
             shared long log_graph_nodes_cache_misses;
 
-            shared bool[InfoNodeWalk] log_global_node_walk_visited;
             shared long log_global_node_walk_duplicates;
         }
         ulong log_analysis_time;
@@ -371,6 +371,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 long graph_nodes_walked_acc = 0;
                 long graph_nodes_cache_hits_acc = 0;
                 long graph_nodes_cache_misses_acc = 0;
+                long node_walk_duplicates_acc = 0;
             }
 
             auto terminal_leaves = appender!(InfoLeaf[]);
@@ -403,13 +404,13 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 unvisited.removeFront();
                 visited[curr] = true;
 
-                version (analysis_log) {
-                    if (curr in log_global_node_walk_visited) {
-                        atomicOp!"+="(this.log_global_node_walk_duplicates, 1);
-                    } else {
-                        synchronized { log_global_node_walk_visited[curr] = true; }
-                    }
-                }
+                if (curr in global_node_walk_visited) {
+                    version (analysis_log)
+                        node_walk_duplicates_acc++;
+                } else {
+                    // synchronized { global_node_walk_visited[curr] = true; }
+                    global_node_walk_visited[curr] = true;
+                }      
 
                 mixin(LOG_DEBUG!(
                         `format("  visiting: node: %s (#%s), walk: %s", curr.node, curr.owner_commit_ix, curr.walk_commit_ix)`));
@@ -552,6 +553,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 atomicOp!"+="(this.log_graph_nodes_walked, graph_nodes_walked_acc);
                 atomicOp!"+="(this.log_graph_nodes_cache_hits, graph_nodes_cache_hits_acc);
                 atomicOp!"+="(this.log_graph_nodes_cache_misses, graph_nodes_cache_misses_acc);
+                atomicOp!"+="(this.log_global_node_walk_duplicates, node_walk_duplicates_acc);
             }
 
             // if (enable_ift_graph) {
