@@ -645,14 +645,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             return InformationFlowBacktrace(terminal_leaves_ids.data, maybe_last_node_vert);
         }
 
-        // alias SubtreeSearchWalkCache = IFTGraphSubtree[SubtreeSearchWalk];
-        // SubtreeSearchWalkCache _subtree_search_walk_cache;
-        struct SubtreeSearchWalk {
-            IFTGraphNode node;
-            size_t depth;
-            IFTGraphSubtree parent;
-        }
-
         void analyze_flows() {
             import std.parallelism;
 
@@ -773,6 +765,14 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             mixin(gen_analyze_work_loops!());
+        }
+
+        // alias SubtreeSearchWalkCache = IFTGraphSubtree[SubtreeSearchWalk];
+        // SubtreeSearchWalkCache _subtree_search_walk_cache;
+        struct SubtreeSearchWalk {
+            IFTGraphNode node;
+            size_t depth;
+            IFTGraphSubtree parent;
         }
 
         IFTGraphSubtree find_graph_node_dependency_subtree(IFTGraphNode node_root) {
