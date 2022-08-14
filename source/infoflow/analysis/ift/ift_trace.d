@@ -651,10 +651,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     mixin(LOG_DEBUG!(`format("   found dependency: %s", dep)`));
 
                     // check if the dependency is a loop
-                    if (dep.src == curr.node) {
-                        mixin(LOG_DEBUG!(`format("    dependency is loop: %s", dep)`));
-                        continue;
-                    }
+                    enforce(dep.src != curr.node,
+                        format("found loop in dependency subtree between %s and %s", curr.node, dep.src));
 
                     auto dep_walk = GraphSubtreeWalk(dep.src, curr.depth + 1);
                     // NOTE: a node can be queued multiple times at different depths
