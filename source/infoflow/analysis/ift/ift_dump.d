@@ -165,15 +165,24 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
 
         void dump_graph() {
             // also dump ift graph
-            writefln(" ift graph:");
+            // writefln(" ift graph:");
+            mixin(LOG_INFO!(`" ift graph:"`));
 
+            mixin(LOG_TRACE!(`"  nodes"`));
             foreach (node; ift.ift_graph.nodes) {
-                writefln("  %s", node);
+                mixin(LOG_TRACE!(`format("   %s", node)`));
             }
+            mixin(LOG_TRACE!(`"  edges"`));
             foreach (edge; ift.ift_graph.edges) {
-                writefln("  %s", edge);
-                // writefln("  %s %s %s", edge.src, edge.is_forward ? "->" : "<-", edge.dst);
+                mixin(LOG_TRACE!(`format("   %s", edge)`));
             }
+
+            // mixin(LOG_INFO!(`"  stats"`));
+            // mixin(LOG_INFO!(`"   verts: %s", ift.ift_graph.num_verts`));
+            // mixin(LOG_INFO!(`"   edges: %s", ift.ift_graph.num_edges`));
+            writefln("  stats:");
+            writefln("   verts: %s", ift.ift_graph.num_verts);
+            writefln("   edges: %s", ift.ift_graph.num_edges);
 
             // // go through all ift tree roots
             // foreach (tree_root; ift.ift_graphs) {

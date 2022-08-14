@@ -105,6 +105,14 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
         IFTGraphEdge[] get_edges_to(IFTGraphNode node) {
             return filter_edges_to(node).array;
         }
+
+        @property size_t num_verts() {
+            return nodes.length;
+        }
+
+        @property size_t num_edges() {
+            return edges.length;
+        }
     }
 
     struct IFTGraphEdge {
