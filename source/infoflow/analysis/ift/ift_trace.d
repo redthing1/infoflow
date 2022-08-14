@@ -382,7 +382,42 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // auto terminal_leaves = appender!(InfoLeaf[]);
             auto terminal_leaves_ids = appender!(size_t[]);
 
-            pragma(inline, true) void add_info_leaf(InfoLeaf leaf) {
+            IFTGraphNode create_graph_vert(IFTGraphNode parent_vert, InfoNode curr_node, ulong commit_ix) {
+                // create a graph vert for this commit
+                version (analysis_log)
+                    graph_nodes_walked_acc++;
+                
+                // use a cache so that we don't create duplicate vertices
+                IFTGraphNode curr_graph_vert;
+
+                // auto parent_vert = curr.parent.get;
+                // auto curr_node = curr.node;
+
+                auto cached_graph_vert = ift_graph.find_in_cache(commit_ix, curr_node);
+                if (cached_graph_vert) {
+                // if (likely(cached_graph_vert !is null)) {
+                    curr_graph_vert = cached_graph_vert;
+                    
+                    version (analysis_log)
+                        graph_nodes_cache_hits_acc++;
+                } else {
+                    curr_graph_vert = new IFTGraphNode(InfoView(curr_node, commit_ix));
+                    ift_graph.add_node(curr_graph_vert);
+
+                    version (analysis_log)
+                        graph_nodes_cache_misses_acc++;
+                }
+
+                // connect ourselves to our parent (parent comes in the future, so edge us -> parent)
+                mixin(LOG_DEBUG!(
+                    `format("   adding graph edge: %s -> %s", curr_graph_vert, parent_vert)`));
+                
+                ift_graph.add_edge(IFTGraphEdge(curr_graph_vert, parent_vert));
+
+                return curr_graph_vert;
+            }
+
+            pragma(inline, true) void add_info_leaf(InfoNodeWalk walk, InfoLeaf leaf) {
                 // terminal_leaves ~= leaf;
 
                 auto leaf_ix = global_info_leafs_buffer.length;
@@ -394,6 +429,12 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 version (analysis_log)
                     found_sources_acc++;
+                
+                // add a leaf node to the graph
+                if (enable_ift_graph) {
+                    enforce(!walk.parent.isNull, "walk.parent is null");
+                    auto graph_vert = create_graph_vert(walk.parent.get, leaf.node, leaf.commit_id);
+                }
             }
 
             Nullable!IFTGraphNode maybe_last_node_vert;
@@ -449,41 +490,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 version (analysis_log)
                     visited_info_nodes_acc++;
 
-                Nullable!IFTGraphNode maybe_curr_graph_vert;
-
-                if (enable_ift_graph) {
-                    // create a graph vert for this commit
-                    
-                    version (analysis_log)
-                        graph_nodes_walked_acc++;
-                    
-                    // use a cache so that we don't create duplicate vertices
-                    IFTGraphNode curr_graph_vert;
-                    // auto cached_graph_vert = ift_graph.find_cached(curr.owner_commit_ix, curr.node);
-                    auto cached_graph_vert = ift_graph.find_in_cache(curr.owner_commit_ix, curr.node);
-                    if (cached_graph_vert) {
-                    // if (likely(cached_graph_vert !is null)) {
-                        curr_graph_vert = cached_graph_vert;
-                        
-                        version (analysis_log)
-                            graph_nodes_cache_hits_acc++;
-                    } else {
-                        curr_graph_vert = new IFTGraphNode(InfoView(curr.node, curr.owner_commit_ix));
-                        ift_graph.add_node(curr_graph_vert);
-
-                        version (analysis_log)
-                            graph_nodes_cache_misses_acc++;
-                    }
-                    // connect ourselves to our parent (parent comes in the future, so edge us -> parent)
-                    mixin(LOG_DEBUG!(
-                        `format("   adding graph edge: %s -> %s", curr_graph_vert, curr.parent)`));
-                    
-                    auto parent_vert = curr.parent.get;
-                    ift_graph.add_edge(IFTGraphEdge(curr_graph_vert, parent_vert));
-
-                    maybe_curr_graph_vert = curr_graph_vert;
-                }
-
                 if (curr.node.type == InfoType.Immediate
                     || curr.node.type == InfoType.Device
                     || curr.node.type == InfoType.CSR) {
@@ -491,7 +497,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // this is a leaf source, so we want to record it
                     // all data comes from some sort of leaf source
                     auto leaf = InfoLeaf(curr.node, curr.owner_commit_ix);
-                    add_info_leaf(leaf);
+                    add_info_leaf(curr, leaf);
                     mixin(LOG_DEBUG!(`format("   leaf (source): %s", leaf)`));
 
                     continue;
@@ -510,7 +516,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         // let's update the type to mmio
                         curr.node.type = InfoType.MMIO;
                         auto leaf = InfoLeaf(curr.node, curr.owner_commit_ix);
-                        add_info_leaf(leaf);
+                        add_info_leaf(curr, leaf);
                         mixin(LOG_DEBUG!(`format("   leaf (mmio): %s", leaf)`));
 
                         continue;
@@ -526,13 +532,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // treat PC as a deterministic register
                     curr.node.type = InfoType.DeterministicRegister;
 
-                    if (!maybe_curr_graph_vert.isNull) {
-                        // update tree
-                        maybe_curr_graph_vert.get.info_view.node = curr.node;
-                    }
-
                     auto leaf = InfoLeaf(curr.node, curr.owner_commit_ix);
-                    add_info_leaf(leaf);
+                    add_info_leaf(curr, leaf);
                     mixin(LOG_DEBUG!(`format("   leaf (pc): %s", leaf)`));
 
                     continue;
@@ -546,15 +547,23 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // this counts as a leaf node
 
                     auto leaf = InfoLeaf(curr.node, -1); // the current node came from the initial snapshot
-                    add_info_leaf(leaf);
+                    add_info_leaf(curr, leaf);
                     mixin(LOG_DEBUG!(`format("   leaf (pre-initial): %s", leaf)`));
 
                     continue;
                 }
 
+                // we successfully found a touching commit
+
                 auto touching_commit = trace.commits[touching_commit_ix];
                 mixin(LOG_DEBUG!(`format("   found last touching commit (#%s) for node: %s: %s",
                         touching_commit_ix, curr, touching_commit)`));
+                
+                // create an inner node in the graph for this commit
+                Nullable!IFTGraphNode maybe_curr_graph_vert;
+                if (enable_ift_graph) {
+                    maybe_curr_graph_vert = create_graph_vert(curr.parent.get(), curr.node, touching_commit_ix);
+                }
 
                 // get all dependencies of this commit
                 auto deps = touching_commit.sources.reverse;
