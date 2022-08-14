@@ -31,14 +31,13 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
     /** analyzer for dynamic information flow tracking **/
     final class IFTAnalyzer : TBaseAnalysis.BaseAnalyzer {
         Commit clobber;
-        InfoLeafs[TRegSet] clobbered_regs_sources;
-        InfoLeafs[TRegWord] clobbered_mem_sources;
-        InfoLeafs[TRegWord] clobbered_csr_sources;
         IFTDataType included_data = IFTDataType.Standard;
 
         bool enable_ift_graph = false;
         IFTGraph ift_graph = new IFTGraph();
+
         shared bool[InfoNodeWalk] global_node_walk_visited;
+        shared InfoLeaf[] global_info_leafs_buffer;
 
         version (analysis_log) {
             shared long log_visited_info_nodes;
@@ -353,7 +352,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // }
         }
 
-        InfoLeaf[] backtrace_information_flow(InfoNode last_node) {
+        size_t[] backtrace_information_flow(InfoNode last_node) {
             mixin(LOG_INFO!(`format("backtracking information flow for node: %s", last_node)`));
 
             // 1. get the commit corresponding to this node
@@ -374,10 +373,19 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 long node_walk_duplicates_acc = 0;
             }
 
-            auto terminal_leaves = appender!(InfoLeaf[]);
+            // auto terminal_leaves = appender!(InfoLeaf[]);
+            auto terminal_leaves_ids = appender!(size_t[]);
 
             pragma(inline, true) void add_info_leaf(InfoLeaf leaf) {
-                terminal_leaves ~= leaf;
+                // terminal_leaves ~= leaf;
+
+                auto leaf_ix = global_info_leafs_buffer.length;
+                synchronized {
+                    global_info_leafs_buffer ~= leaf;
+                }
+
+                terminal_leaves_ids ~= leaf_ix;
+
                 version (analysis_log)
                     found_sources_acc++;
             }
@@ -560,7 +568,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             //     analyze_tree_children(maybe_tree_root.get);
             // }
 
-            return terminal_leaves.data;
+            // return terminal_leaves.data;
+            return terminal_leaves_ids.data;
         }
 
         // void analyze_tree_children(IFTGraphNode tree_root) {
@@ -683,21 +692,24 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             pragma(inline, true) void do_reg_trace(InfoNode last_node) {
-                auto reg_sources = backtrace_information_flow(last_node);
-                log_found_sources(reg_sources);
-                clobbered_regs_sources[cast(TRegSet) last_node.data] = reg_sources;
+                // auto reg_sources = backtrace_information_flow(last_node);
+                // log_found_sources(reg_sources);
+                // clobbered_regs_sources[cast(TRegSet) last_node.data] = reg_sources;
+                auto reg_source_ids = backtrace_information_flow(last_node);
             }
 
             pragma(inline, true) void do_mem_trace(InfoNode last_node) {
-                auto mem_sources = backtrace_information_flow(last_node);
-                log_found_sources(mem_sources);
-                clobbered_mem_sources[last_node.data] = mem_sources;
+                // auto mem_sources = backtrace_information_flow(last_node);
+                // log_found_sources(mem_sources);
+                // clobbered_mem_sources[last_node.data] = mem_sources;
+                auto mem_source_ids = backtrace_information_flow(last_node);
             }
 
             pragma(inline, true) void do_csr_trace(InfoNode last_node) {
-                auto csr_sources = backtrace_information_flow(last_node);
-                log_found_sources(csr_sources);
-                clobbered_csr_sources[last_node.data] = csr_sources;
+                // auto csr_sources = backtrace_information_flow(last_node);
+                // log_found_sources(csr_sources);
+                // clobbered_csr_sources[last_node.data] = csr_sources;
+                // auto csr_sources = backtrace_information_flow(last_node);
             }
 
             // select serial/parallel task

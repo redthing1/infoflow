@@ -112,48 +112,48 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                 }
             }
 
-            // registers
-            foreach (reg_id; ift.clobbered_regs_sources.byKey) {
-                // writefln("  reg %s:", reg_id);
-                mixin(LOG_TRACE!(`format("  reg %s:", reg_id)`));
-                if (reg_id !in ift.clobbered_regs_sources) {
-                    // ???
-                    mixin(LOG_ERROR!(`format("  reg %s not in clobbered_regs_sources", reg_id)`));
-                    enforce(0, "reg not in clobbered_regs_sources");
-                }
-                foreach (source; ift.clobbered_regs_sources[reg_id]) {
-                    log_commit_for_source(source);
-                }
-            }
+            // // registers
+            // foreach (reg_id; ift.clobbered_regs_sources.byKey) {
+            //     // writefln("  reg %s:", reg_id);
+            //     mixin(LOG_TRACE!(`format("  reg %s:", reg_id)`));
+            //     if (reg_id !in ift.clobbered_regs_sources) {
+            //         // ???
+            //         mixin(LOG_ERROR!(`format("  reg %s not in clobbered_regs_sources", reg_id)`));
+            //         enforce(0, "reg not in clobbered_regs_sources");
+            //     }
+            //     foreach (source; ift.clobbered_regs_sources[reg_id]) {
+            //         log_commit_for_source(source);
+            //     }
+            // }
 
-            // memory
-            foreach (mem_addr; ift.clobbered_mem_sources.byKey) {
-                // writefln("  mem[%04x]:", mem_addr);
-                mixin(LOG_TRACE!(`format("  mem[%04x]:", mem_addr)`));
-                if (mem_addr !in ift.clobbered_mem_sources) {
-                    // ???
-                    mixin(LOG_ERROR!(
-                            `format("  mem[%04x] not in clobbered_mem_sources", mem_addr)`));
-                    enforce(0, "mem not in clobbered_mem_sources");
-                }
-                foreach (source; ift.clobbered_mem_sources[mem_addr]) {
-                    log_commit_for_source(source);
-                }
-            }
+            // // memory
+            // foreach (mem_addr; ift.clobbered_mem_sources.byKey) {
+            //     // writefln("  mem[%04x]:", mem_addr);
+            //     mixin(LOG_TRACE!(`format("  mem[%04x]:", mem_addr)`));
+            //     if (mem_addr !in ift.clobbered_mem_sources) {
+            //         // ???
+            //         mixin(LOG_ERROR!(
+            //                 `format("  mem[%04x] not in clobbered_mem_sources", mem_addr)`));
+            //         enforce(0, "mem not in clobbered_mem_sources");
+            //     }
+            //     foreach (source; ift.clobbered_mem_sources[mem_addr]) {
+            //         log_commit_for_source(source);
+            //     }
+            // }
 
-            // csr
-            foreach (csr_id; ift.clobbered_csr_sources.byKey) {
-                // writefln("  csr $%08x:", csr_id);
-                mixin(LOG_TRACE!(`format("  csr $%08x:", csr_id)`));
-                if (csr_id !in ift.clobbered_csr_sources) {
-                    // ???
-                    mixin(LOG_ERROR!(`format("  csr $%08x not in clobbered_csr_sources", csr_id)`));
-                    enforce(0, "csr not in clobbered_csr_sources");
-                }
-                foreach (source; ift.clobbered_csr_sources[csr_id]) {
-                    log_commit_for_source(source);
-                }
-            }
+            // // csr
+            // foreach (csr_id; ift.clobbered_csr_sources.byKey) {
+            //     // writefln("  csr $%08x:", csr_id);
+            //     mixin(LOG_TRACE!(`format("  csr $%08x:", csr_id)`));
+            //     if (csr_id !in ift.clobbered_csr_sources) {
+            //         // ???
+            //         mixin(LOG_ERROR!(`format("  csr $%08x not in clobbered_csr_sources", csr_id)`));
+            //         enforce(0, "csr not in clobbered_csr_sources");
+            //     }
+            //     foreach (source; ift.clobbered_csr_sources[csr_id]) {
+            //         log_commit_for_source(source);
+            //     }
+            // }
 
             writefln(" theoritical minimization:");
             auto num_minimal_commits = minimal_commit_set.length;
