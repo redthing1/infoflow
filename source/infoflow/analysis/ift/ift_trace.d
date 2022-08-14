@@ -238,17 +238,23 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 if (info_key !in commit_effect_touchers_cache) return -1; // no known touchers for this item
 
                 auto cached_commit_ids = commit_effect_touchers_cache[info_key].commit_ids;
-                ulong cached_commit_ids_length = cached_commit_ids.length;
-                ulong cached_commit_ids_high = cached_commit_ids_length - 1;
-                ulong cached_commit_ids_low = 0;
+                long cached_commit_ids_length = cached_commit_ids.length;                
+                enforce(cached_commit_ids_length > 0, "touchers cache should have at least one commit id");
+
+                // basic binary search for a suitable commit id
+                long cached_commit_ids_high = cached_commit_ids_length - 1;
+                long cached_commit_ids_low = 0;
                 while (cached_commit_ids_low <= cached_commit_ids_high) {
-                    ulong cached_commit_ids_mid = (cached_commit_ids_low + cached_commit_ids_high) / 2;
+                    long cached_commit_ids_mid = (cached_commit_ids_low + cached_commit_ids_high) / 2;
+                    // writefln("bounds this step: %s %s %s", cached_commit_ids_low, cached_commit_ids_mid, cached_commit_ids_high);
                     if (cached_commit_ids[cached_commit_ids_mid] <= from_commit) {
                         cached_commit_ids_low = cached_commit_ids_mid + 1;
                     } else {
                         cached_commit_ids_high = cached_commit_ids_mid - 1;
                     }
                 }
+
+                if (cached_commit_ids_high < 0) return -1; // none found
 
                 // check if we found a suitable commit id
                 // writefln("bsearch results below %s in %s: %s %s", from_commit, cached_commit_ids, cached_commit_ids_low, cached_commit_ids_high);
