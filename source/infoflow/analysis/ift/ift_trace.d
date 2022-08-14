@@ -434,6 +434,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                             graph_nodes_cache_misses_acc++;
                     }
                     // connect ourselves to our parent (parent comes in the future, so edge us -> parent)
+                    mixin(LOG_DEBUG!(
+                        `format("   adding graph edge: %s -> %s", curr_graph_vert, curr.parent)`));
+                    
                     auto parent_vert = curr.parent.get;
                     ift_graph.add_edge(IFTGraphEdge(curr_graph_vert, parent_vert));
 
