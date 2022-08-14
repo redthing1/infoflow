@@ -153,6 +153,9 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
         CSR = (1 << 7),
         MMIO = Memory | Device,
         DeterministicRegister = Register | (1 << 8),
+        Indeterminate = 1 << 9,
+        IndeterminateRegister = Register | Indeterminate,
+        IndeterminateMemory = Memory | Indeterminate,
         Reserved2,
         Reserved3,
         Reserved4,
@@ -195,6 +198,12 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
                 break;
             case InfoType.DeterministicRegister:
                 sb ~= format("%s=$%04x", data.to!TRegSet, value);
+                break;
+            case InfoType.IndeterminateRegister:
+                sb ~= format("%s=$%04x", data.to!TRegSet, value);
+                break;
+            case InfoType.IndeterminateMemory:
+                sb ~= format("mem[$%08x]=%02x", data, value);
                 break;
             default:
                 assert(0, format("unhandled info node to string for type %s", type));
