@@ -588,12 +588,65 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 atomicOp!"+="(this.log_global_node_walk_duplicates, node_walk_duplicates_acc);
             }
 
-            // if (enable_ift_graph) {
-            //     analyze_tree_children(maybe_tree_root.get);
-            // }
+            if (enable_ift_graph) {
+                find_graph_node_dependency_subtree(maybe_last_node_vert.get);
+            }
 
             // return terminal_leaves.data;
             return terminal_leaves_ids.data;
+        }
+
+        void find_graph_node_dependency_subtree(IFTGraphNode node_root) {
+            // the node root is the final endpoint of the subtree
+            // we want to search upward and find all the inner and leaf nodes
+
+            struct GraphSubtreeWalk {
+                IFTGraphNode node;
+                size_t depth;
+            }
+
+            // we can do an iterative depth-first search
+            auto unvisited = DList!GraphSubtreeWalk();
+            bool[GraphSubtreeWalk] visited;
+
+            // add initial node to the unvisited list
+            unvisited.insertFront(GraphSubtreeWalk(node_root, 0));
+
+            mixin(LOG_DEBUG!(`format(" building dependency subtree for node: %s", node_root)`));
+
+            while (!unvisited.empty) {
+                // get current from first unvisited node
+                auto curr = unvisited.front;
+
+                // mark as visited
+                unvisited.removeFront();
+                visited[curr] = true;
+
+                mixin(LOG_DEBUG!(`format("  visiting node: %s", curr)`));
+
+                // get all dependencies: which are nodes that point to this one
+                auto deps = ift_graph.get_edges_to(curr.node);
+                for (auto i = 0; i < deps.length; i++) {
+                    auto dep = deps[i];
+
+                    mixin(LOG_DEBUG!(`format("   found dependency: %s", dep)`));
+
+                    // check if the dependency is a loop
+                    if (dep.src == curr.node) {
+                        mixin(LOG_DEBUG!(`format("    dependency is loop: %s", dep)`));
+                        continue;
+                    }
+
+                    auto dep_walk = GraphSubtreeWalk(dep.src, curr.depth + 1);
+                    // NOTE: a node can be queued multiple times at different depths
+
+                    // if we have not visited this dependency yet, add it to the unvisited list
+                    if (!visited.get(dep_walk, false)) {
+                        unvisited.insertFront(dep_walk);
+                        mixin(LOG_DEBUG!(`format("     queued walk: %s", dep_walk)`));
+                    }
+                }
+            }
         }
 
         // void analyze_tree_children(IFTGraphNode tree_root) {
