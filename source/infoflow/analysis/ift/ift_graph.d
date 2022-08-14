@@ -9,6 +9,7 @@ import std.algorithm;
 import infoflow.analysis.common;
 import std.algorithm.iteration : map, filter, fold;
 import core.atomic : atomicOp;
+import std.exception : enforce;
 
 import infoflow.models;
 
@@ -82,8 +83,27 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             return nodes[index];
         }
 
+        bool[IFTGraphEdge] _edge_cache;
+
+        pragma(inline, true) {
+            private void _store_edge_cache(IFTGraphEdge edge, bool value) {
+                _edge_cache[edge] = value;
+            }
+
+            private bool _find_edge_cache(IFTGraphEdge edge) {
+                if (edge in _edge_cache)
+                    return _edge_cache[edge];
+                return false;
+            }
+        }
+
         void add_edge(IFTGraphEdge edge) {
+            // ensure no duplicate exists
+            enforce(!_find_edge_cache(edge), format("attempt to add duplicate edge: %s", edge));
+
             edges ~= edge;
+            // cache it
+            _store_edge_cache(edge, true);
         }
 
         IFTGraphEdge get_edge_ix(ulong index) {
