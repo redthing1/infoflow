@@ -409,6 +409,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     IFTGraphNode curr_graph_vert;
                     auto cached_graph_vert = ift_graph.find_cached(curr.owner_commit_ix, curr.node);
                     if (cached_graph_vert) {
+                    // if (likely(cached_graph_vert !is null)) {
                         curr_graph_vert = cached_graph_vert;
                         
                         version (analysis_log)
