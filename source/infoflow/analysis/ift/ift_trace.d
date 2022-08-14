@@ -22,6 +22,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
     alias IFTGraph = TIFTAnalysisGraph.IFTGraph;
     alias IFTGraphNode = TIFTAnalysisGraph.IFTGraphNode;
     alias IFTGraphEdge = TIFTAnalysisGraph.IFTGraphEdge;
+    alias IFTGraphSubtree = TIFTAnalysisGraph.IFTGraphSubtree;
 
     static assert([EnumMembers!TRegSet].map!(x => x.to!string)
             .canFind!(x => x == "PC"),
@@ -622,14 +623,17 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             struct GraphSubtreeWalk {
                 IFTGraphNode node;
                 size_t depth;
+                Nullable!IFTGraphSubtree parent;
             }
 
             // we can do an iterative depth-first search
             auto unvisited = DList!GraphSubtreeWalk();
             bool[GraphSubtreeWalk] visited;
 
+            auto root_subtree = new IFTGraphSubtree(node_root);
+
             // add initial node to the unvisited list
-            unvisited.insertFront(GraphSubtreeWalk(node_root, 0));
+            unvisited.insertFront(GraphSubtreeWalk(node_root, 0, Nullable!IFTGraphSubtree(root_subtree)));
 
             mixin(LOG_DEBUG!(`format(" building dependency subtree for node: %s", node_root)`));
 
@@ -643,6 +647,20 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 mixin(LOG_DEBUG!(`format("  visiting node: %s", curr)`));
 
+                // add to subtree
+                Nullable!IFTGraphSubtree maybe_subtree_node;
+                if (!curr.parent.isNull) {
+                    auto parent = curr.parent.get();
+                    // ensure curr is not parent
+                    if (curr.node != parent.node) {
+                        auto tree_node = new IFTGraphSubtree(curr.node);
+                        parent.children ~= tree_node;
+                        maybe_subtree_node = tree_node;
+                    } else {
+                        maybe_subtree_node = parent;
+                    }
+                }
+
                 // get all dependencies: which are nodes that point to this one
                 auto deps = ift_graph.get_edges_to(curr.node);
                 for (auto i = 0; i < deps.length; i++) {
@@ -654,7 +672,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     enforce(dep.src != curr.node,
                         format("found loop in dependency subtree between %s and %s", curr.node, dep.src));
 
-                    auto dep_walk = GraphSubtreeWalk(dep.src, curr.depth + 1);
+                    auto dep_walk = GraphSubtreeWalk(dep.src, curr.depth + 1, maybe_subtree_node);
                     // NOTE: a node can be queued multiple times at different depths
 
                     // if we have not visited this dependency yet, add it to the unvisited list
@@ -664,6 +682,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     }
                 }
             }
+
+            // dump the subtree
+            writefln("subtree for %s:", node_root);
+            writefln("%s", root_subtree.dump());
         }
 
         // void analyze_tree_children(IFTGraphNode tree_root) {

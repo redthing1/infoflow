@@ -170,4 +170,66 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             return sb.array;
         }
     }
+
+    final class IFTGraphSubtree {
+        IFTGraphNode node;
+        IFTGraphSubtree[] children;
+
+        this(IFTGraphNode node, IFTGraphSubtree[] children = []) {
+            this.node = node;
+            this.children = children;
+        }
+
+        override string toString() const {
+            import std.string : format;
+            import std.conv : to;
+            import std.array : appender, array;
+
+            auto sb = appender!string;
+
+            auto tag_str = "";
+            // sb ~= format("#%s %s [%s]", node.info_view.commit_id, node.info_view.node.toString(), tag_str);
+            sb ~= format("#%s %s", node.info_view.commit_id, node.info_view.node.toString());
+
+            return sb.array;
+        }
+
+        string dump() const {
+            import std.string : format;
+            import std.conv : to;
+            import std.array : appender, array;
+
+            auto sb = appender!string;
+
+            // do a depth-first traversal
+            struct TreeNodeWalk {
+                const IFTGraphSubtree tree;
+                int depth;
+            }
+
+            auto stack = DList!TreeNodeWalk();
+            auto tree_root = this;
+            stack.insertFront(TreeNodeWalk(tree_root, 0));
+
+            while (!stack.empty) {
+                auto curr_walk = stack.front;
+                stack.removeFront();
+
+                // visit and print
+                // indent
+                for (auto i = 0; i < curr_walk.depth; i++) {
+                    sb ~= format("  ");
+                }
+                // print node
+                sb ~= format("%s\n", curr_walk.tree);
+
+                // push children
+                foreach (child; curr_walk.tree.children) {
+                    stack.insertFront(TreeNodeWalk(child, curr_walk.depth + 1));
+                }
+            }
+
+            return sb.array;
+        }
+    }
 }
