@@ -231,19 +231,78 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         }
 
         long find_commit_last_touching(InfoNode node, long from_commit) {
-            if (node.type & InfoType.Register) {
-                // go back through commits until we find one whose results modify this TRegSet
-                for (auto i = from_commit; i >= 0; i--) {
-                    auto commit = &trace.commits[i];
-                    version (analysis_log)
-                        atomicOp!"+="(this.log_commits_walked, 1);
-                    for (auto j = 0; j < commit.effects.length; j++) {
-                        auto effect = commit.effects[j];
-                        if (effect.type & InfoType.Register && effect.data == node.data) {
-                            // the TRegSet id in the commit results is the same as the reg id in the info node we are searching
-                            return i;
-                        }
+            pragma(inline, true) long find_last_touch_with_caches(CommitCacheInfoKey info_key) {
+                // use the toucher cache to quickly find the last commit that touched this item
+                // we can simply binary search for the largest commit id that is below from_commit
+
+                if (info_key !in commit_effect_touchers_cache) return -1; // no known touchers for this item
+
+                auto cached_commit_ids = commit_effect_touchers_cache[info_key].commit_ids;
+                ulong cached_commit_ids_length = cached_commit_ids.length;
+                ulong cached_commit_ids_high = cached_commit_ids_length - 1;
+                ulong cached_commit_ids_low = 0;
+                while (cached_commit_ids_low <= cached_commit_ids_high) {
+                    ulong cached_commit_ids_mid = (cached_commit_ids_low + cached_commit_ids_high) / 2;
+                    if (cached_commit_ids[cached_commit_ids_mid] <= from_commit) {
+                        cached_commit_ids_low = cached_commit_ids_mid + 1;
+                    } else {
+                        cached_commit_ids_high = cached_commit_ids_mid - 1;
                     }
+                }
+
+                // check if we found a suitable commit id
+                // writefln("bsearch results below %s in %s: %s %s", from_commit, cached_commit_ids, cached_commit_ids_low, cached_commit_ids_high);
+                if (cached_commit_ids[cached_commit_ids_high] <= from_commit) {
+                    // writefln("found commit id via bsearch: %d", cached_commit_ids[cached_commit_ids_high]);
+                    return cached_commit_ids[cached_commit_ids_high];
+                }
+
+                // failure
+                return -1;
+            }
+
+            if (node.type & InfoType.Register) {
+                // // go back through commits until we find one whose results modify this TRegSet
+                // for (auto i = from_commit; i >= 0; i--) {
+                //     auto commit = &trace.commits[i];
+                //     version (analysis_log)
+                //         atomicOp!"+="(this.log_commits_walked, 1);
+                //     for (auto j = 0; j < commit.effects.length; j++) {
+                //         auto effect = commit.effects[j];
+                //         if (effect.type & InfoType.Register && effect.data == node.data) {
+                //             // the TRegSet id in the commit results is the same as the reg id in the info node we are searching
+                //             return i;
+                //         }
+                //     }
+                // }
+
+                // // use the toucher cache to quickly find the last commit that touched this register
+                // // we can simply binary search for the largest commit id that is below from_commit
+                // auto info_key = CommitCacheInfoKey(InfoType.Register, node.data);
+                // auto cached_commit_ids = commit_effect_touchers_cache[info_key].commit_ids;
+                // ulong cached_commit_ids_length = cached_commit_ids.length;
+                // ulong cached_commit_ids_high = cached_commit_ids_length - 1;
+                // ulong cached_commit_ids_low = 0;
+                // while (cached_commit_ids_low <= cached_commit_ids_high) {
+                //     ulong cached_commit_ids_mid = (cached_commit_ids_low + cached_commit_ids_high) / 2;
+                //     if (cached_commit_ids[cached_commit_ids_mid] <= from_commit) {
+                //         cached_commit_ids_low = cached_commit_ids_mid + 1;
+                //     } else {
+                //         cached_commit_ids_high = cached_commit_ids_mid - 1;
+                //     }
+                // }
+
+                // // check if we found a suitable commit id
+                // // writefln("bsearch results below %s in %s: %s %s", from_commit, cached_commit_ids, cached_commit_ids_low, cached_commit_ids_high);
+                // if (cached_commit_ids[cached_commit_ids_high] <= from_commit) {
+                //     // writefln("found commit id via bsearch: %d", cached_commit_ids[cached_commit_ids_high]);
+                //     return cached_commit_ids[cached_commit_ids_high];
+                // }
+
+                auto info_key = CommitCacheInfoKey(InfoType.Register, node.data);
+                auto cached_commit_id = find_last_touch_with_caches(info_key);
+                if (cached_commit_id >= 0) {
+                    return cached_commit_id;
                 }
 
                 // if we're still here, then we haven't found a commit that touches this TRegSet
@@ -259,19 +318,26 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 mixin(LOG_ERROR!(
                         `format("ERROR: no touching or matching initial found: %s", node)`));
             } else if (node.type & InfoType.Memory) {
-                // go back through commits until we find one whose results modify this memory
-                for (auto i = from_commit; i >= 0; i--) {
-                    auto commit = &trace.commits[i];
-                    version (analysis_log)
-                        atomicOp!"+="(this.log_commits_walked, 1);
-                    for (auto j = 0; j < commit.effects.length; j++) {
-                        auto effect = commit.effects[j];
-                        if (effect.type & InfoType.Memory && effect.data == node.data) {
-                            // the memory address in the commit results is the same as the mem addr in the info node we are searching
-                            return i;
-                        }
-                    }
+                // // go back through commits until we find one whose results modify this memory
+                // for (auto i = from_commit; i >= 0; i--) {
+                //     auto commit = &trace.commits[i];
+                //     version (analysis_log)
+                //         atomicOp!"+="(this.log_commits_walked, 1);
+                //     for (auto j = 0; j < commit.effects.length; j++) {
+                //         auto effect = commit.effects[j];
+                //         if (effect.type & InfoType.Memory && effect.data == node.data) {
+                //             // the memory address in the commit results is the same as the mem addr in the info node we are searching
+                //             return i;
+                //         }
+                //     }
+                // }
+
+                auto info_key = CommitCacheInfoKey(InfoType.Memory, node.data);
+                auto cached_commit_id = find_last_touch_with_caches(info_key);
+                if (cached_commit_id >= 0) {
+                    return cached_commit_id;
                 }
+
                 // if we're still here, that means we haven't found a commit that touches this memory position
                 // it's possible the memory wasn't touched because it was already in place before the initial snapshot
                 // to check this, we'll verify if the expected memory value can be found in the initial snapshot
