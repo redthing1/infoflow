@@ -625,8 +625,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             return terminal_leaves_ids.data;
         }
 
-        alias SubtreeSearchWalkCache = IFTGraphSubtree[SubtreeSearchWalk];
-        SubtreeSearchWalkCache _subtree_search_walk_cache;
+        // alias SubtreeSearchWalkCache = IFTGraphSubtree[SubtreeSearchWalk];
+        // SubtreeSearchWalkCache _subtree_search_walk_cache;
         struct SubtreeSearchWalk {
             IFTGraphNode node;
             size_t depth;
@@ -656,37 +656,37 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 unvisited.removeFront();
                 visited[curr] = true;
 
-                if (aggressive_revisit_skipping) {
-                    // we have aggressive skipping enabled, use the search walk cache
-                    if (curr in _subtree_search_walk_cache) {
-                        // populate from cache
-                        auto cached = _subtree_search_walk_cache[curr];
-                        curr.parent.children ~= new IFTGraphSubtree(cached.node);
-                        // writefln("hit cache for %s", curr);
-                        continue;
-                    }
-                }
+                // if (aggressive_revisit_skipping) {
+                //     // we have aggressive skipping enabled, use the search walk cache
+                //     if (curr in _subtree_search_walk_cache) {
+                //         // populate from cache
+                //         auto cached = _subtree_search_walk_cache[curr];
+                //         curr.parent.children ~= new IFTGraphSubtree(cached.node);
+                //         // writefln("hit cache for %s", curr);
+                //         continue;
+                //     }
+                // }
 
                 mixin(LOG_DEBUG!(`format("  visiting node: %s", curr)`));
 
                 // add to subtree
                 IFTGraphSubtree subtree_node;
-                // ensure curr is not parent
-                if (curr.node != curr.parent.node) {
-                    auto tree_node = new IFTGraphSubtree(curr.node);
-                    curr.parent.children ~= tree_node;
-                    subtree_node = tree_node;
-                } else {
-                    subtree_node = curr.parent;
-                }
+                // // ensure curr is not parent
+                // if (curr.node != curr.parent.node) {
+                //     auto tree_node = new IFTGraphSubtree(curr.node);
+                //     curr.parent.children ~= tree_node;
+                //     subtree_node = tree_node;
+                // } else {
+                //     subtree_node = curr.parent;
+                // }
 
-                if (aggressive_revisit_skipping) {
-                    // add to cache
-                    synchronized {
-                        _subtree_search_walk_cache[curr] = subtree_node;
-                    }
-                    // _subtree_search_walk_cache[curr] = subtree_node;
-                }
+                // if (aggressive_revisit_skipping) {
+                //     // add to cache
+                //     synchronized {
+                //         _subtree_search_walk_cache[curr] = subtree_node;
+                //     }
+                //     // _subtree_search_walk_cache[curr] = subtree_node;
+                // }
 
                 // get all dependencies: which are nodes that point to this one
                 auto deps = ift_graph.get_edges_to(curr.node);
