@@ -868,9 +868,11 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             ift_graph.rebuild_neighbors_cache();
             mixin(LOG_INFO!(`"  done building graph caches"`));
 
-            foreach (final_vert; final_graph_verts) {
+            auto num_final_graph_verts = final_graph_verts.length;
+            foreach (i, final_vert; final_graph_verts) {
                 // analyze the subtree from this vert
                 mixin(LOG_INFO!(`" analyzing subtrees for vert: %s", final_vert`));
+                // mixin(LOG_INFO!(`" analyzing subtrees for vert (%d/%d): %s", i, num_final_graph_verts, final_vert`));
 
                 auto dep_subtree = find_graph_node_dependency_subtree(final_vert);
 
