@@ -579,11 +579,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // this means some information was found to have been traced to the initial snapshot
                     // this counts as a leaf node
 
-                    auto leaf = InfoLeaf(curr.node, -1); // the current node came from the initial snapshot
-
                     // add the deterministic flag
                     curr.node.type |= InfoType.DeterminateValue;
 
+                    auto leaf = InfoLeaf(curr.node, -1); // the current node came from the initial snapshot
                     add_info_leaf(curr, leaf);
                     mixin(LOG_DEBUG!(`format("   leaf (pre-initial): %s", leaf)`));
 
@@ -911,8 +910,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         // if this node is final, but the leaf is not, we have a contradiction
                         if ((curr.flags & IFTGraphNode.Flags.Final) > 0 &&
                             (leaf.flags & IFTGraphNode.Flags.Final) == 0) {
-                            enforce(false, format("contradiction in node flags: %s is final, but %s is not",
-                                curr, leaf));
+                            enforce(false, format("contradiction in node flags: %s (%s) is final, but %s (%s) is not",
+                                curr, curr.info_view.node.type, leaf, leaf.info_view.node.type));
                         }
 
                         // if this node is deterministic, but the leaf is not, we should update the node to be not deterministic
