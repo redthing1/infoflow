@@ -47,6 +47,14 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
                 // _nodes_by_commit_cache[node.info_view.commit_id][node.info_view.node] = node;
                 _nodes_by_commit_cache[commit_id][node] = vert;
             }
+
+            private void _clear_cached(ulong commit_id) {
+                _nodes_by_commit_cache[commit_id] = null;
+            }
+
+            private void _remove_cached(ulong commit_id, InfoNode node) {
+                _nodes_by_commit_cache[commit_id].remove(node);
+            }
         }
 
         void add_node(IFTGraphNode node) {
@@ -172,6 +180,34 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             if (node in _node_neighbors_to_cache)
                 return _node_neighbors_to_cache[node];
             return filter_edges_to(node).array;
+        }
+
+        void remove_node(IFTGraphNode node) {
+            // delete the node from the list of nodes
+            nodes.remove(nodes.countUntil(node));
+            // delete the node from the cache
+            _remove_cached(node.info_view.commit_id, node.info_view.node);
+            // delete all edges to and from the node
+            auto edges_from = get_edges_from(node);
+            auto edges_to = get_edges_to(node);
+            foreach (i, edge; edges_from) {
+                remove_edge(edge);
+            }
+            foreach (i, edge; edges_to) {
+                remove_edge(edge);
+            }
+        }
+
+        void remove_edge(IFTGraphEdge edge) {
+            // delete the edge from the list of edges
+            edges.remove(edges.countUntil(edge));
+            // delete the edge from the caches
+            _store_edge_cache(edge, false);
+            // delete the edge from the neighbor lists
+            auto from_neighbors = _node_neighbors_from_cache[edge.src];
+            auto to_neighbors = _node_neighbors_to_cache[edge.dst];
+            from_neighbors.remove(from_neighbors.countUntil(edge));
+            to_neighbors.remove(to_neighbors.countUntil(edge));
         }
 
         @property size_t num_verts() {
