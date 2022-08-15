@@ -941,7 +941,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
         void rebuild_graph_caches() {
             // rebuild caches for the graph
-            mixin(LOG_INFO!(`"rebuilding graph caches"`));
+            mixin(LOG_INFO!(`format(
+                "rebuilding graph caches (%d nodes, %d edges)", ift_graph.nodes.length, ift_graph.edges.length)`));
             ift_graph.rebuild_neighbors_cache();
             mixin(LOG_INFO!(`" done building graph caches"`));
         }
