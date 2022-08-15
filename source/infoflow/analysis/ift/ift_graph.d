@@ -182,9 +182,12 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             return filter_edges_to(node).array;
         }
 
-        void remove_node(IFTGraphNode node) {
+        bool remove_node(IFTGraphNode node) {
             // delete the node from the list of nodes
-            nodes.remove(nodes.countUntil(node));
+            auto node_ix = nodes.countUntil(node);
+            if (node_ix == -1)
+                return false;
+            nodes.remove(node_ix);
             // delete the node from the cache
             _remove_cached(node.info_view.commit_id, node.info_view.node);
             // delete all edges to and from the node
@@ -196,11 +199,16 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             foreach (i, edge; edges_to) {
                 remove_edge(edge);
             }
+
+            return true;
         }
 
-        void remove_edge(IFTGraphEdge edge) {
+        bool remove_edge(IFTGraphEdge edge) {
             // delete the edge from the list of edges
-            edges.remove(edges.countUntil(edge));
+            auto edge_ix = edges.countUntil(edge);
+            if (edge_ix == -1)
+                return false;
+            edges.remove(edge_ix);
             // delete the edge from the caches
             _store_edge_cache(edge, false);
             // delete the edge from the neighbor lists
@@ -208,6 +216,8 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             auto to_neighbors = _node_neighbors_to_cache[edge.dst];
             from_neighbors.remove(from_neighbors.countUntil(edge));
             to_neighbors.remove(to_neighbors.countUntil(edge));
+
+            return true;
         }
 
         @property size_t num_verts() {

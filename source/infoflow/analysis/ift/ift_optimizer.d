@@ -103,14 +103,14 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
                 unvisited.removeFront();
                 visited[curr] = true;
 
-                mixin(LOG_DEBUG!(`format("   visiting %s", curr)`));
+                mixin(LOG_DEBUG!(`format("    visiting %s", curr)`));
                 
                 // queue neighbors (nodes that point to this one
                 auto targets = ift.ift_graph.get_edges_to(curr);
                 foreach (k, target_edge; targets) {
                     auto target_node = target_edge.src;
                     if (!visited.get(target_node, false)) {
-                        mixin(LOG_DEBUG!(`format("    queuing node for prune: %s", target_node)`));
+                        mixin(LOG_DEBUG!(`format("     queuing node for prune: %s", target_node)`));
                         unvisited.insertFront(target_node);
                     }
                 }
