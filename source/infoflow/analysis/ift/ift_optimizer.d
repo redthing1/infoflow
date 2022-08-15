@@ -122,6 +122,10 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
                         mixin(LOG_DEBUG!(`format("     removed node %s", curr)`));
                     }
                     // enforce(remove_result, "failed to remove node from graph");
+                } else {
+                    // curr node is the root node, so just remove all edges touching it
+                    ift.ift_graph.delete_edges_touching(curr);
+                    mixin(LOG_DEBUG!(`format("     removed edges touching root node")`));
                 }
             }
         }

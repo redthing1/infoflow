@@ -214,24 +214,27 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             this.nodes = this.nodes.remove(node_ix);
             // delete the node from the cache
             _remove_cached(node.info_view.commit_id, node.info_view.node);
-            // delete all edges to and from the node
-            auto edges_from = get_edges_from(node);
-            auto edges_to = get_edges_to(node);
-            foreach (i, edge; edges_from) {
-                remove_edge(edge);
-            }
-            foreach (i, edge; edges_to) {
-                remove_edge(edge);
-            }
 
-            // stupid method: scan all edges and delete anything referencing this node
-            foreach (i, edge; this.edges) {
-                if (edge.src == node || edge.dst == node) {
-                    remove_edge(edge);
-                }
-            }
+            delete_edges_touching(node);
 
             return true;
+        }
+
+        void delete_edges_touching(IFTGraphNode node) {
+            // // delete all edges to and from the node
+            // auto edges_from = get_edges_from(node);
+            // auto edges_to = get_edges_to(node);
+            // foreach (i, edge; edges_from) {
+            //     remove_edge(edge);
+            // }
+            // foreach (i, edge; edges_to) {
+            //     remove_edge(edge);
+            // }
+
+            // stupid method: scan all edges and delete anything referencing this node
+            foreach (edge; this.edges.filter!(edge => edge.src == node || edge.dst == node)) {
+                remove_edge(edge);
+            }
         }
 
         bool remove_edge(IFTGraphEdge edge) {
