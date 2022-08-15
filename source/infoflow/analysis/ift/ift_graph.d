@@ -237,8 +237,8 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             // delete the edge from the neighbor lists
             auto from_neighbors = _node_neighbors_from_cache[edge.src];
             auto to_neighbors = _node_neighbors_to_cache[edge.dst];
-            from_neighbors.remove(from_neighbors.countUntil(edge));
-            to_neighbors.remove(to_neighbors.countUntil(edge));
+            from_neighbors = from_neighbors.remove(from_neighbors.countUntil(edge));
+            to_neighbors = to_neighbors.remove(to_neighbors.countUntil(edge));
 
             return true;
         }
