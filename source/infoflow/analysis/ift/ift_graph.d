@@ -187,7 +187,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             auto node_ix = nodes.countUntil(node);
             if (node_ix == -1)
                 return false;
-            nodes.remove(node_ix);
+            nodes = nodes.remove(node_ix);
             // delete the node from the cache
             _remove_cached(node.info_view.commit_id, node.info_view.node);
             // delete all edges to and from the node
@@ -208,7 +208,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             auto edge_ix = edges.countUntil(edge);
             if (edge_ix == -1)
                 return false;
-            edges.remove(edge_ix);
+            edges = edges.remove(edge_ix);
             // delete the edge from the caches
             _store_edge_cache(edge, false);
             // delete the edge from the neighbor lists
