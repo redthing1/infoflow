@@ -224,12 +224,12 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
                 remove_edge(edge);
             }
 
-            // // stupid method: scan all edges and delete anything referencing this node
-            // foreach (i, edge; this.edges) {
-            //     if (edge.src == node || edge.dst == node) {
-            //         remove_edge(edge);
-            //     }
-            // }
+            // stupid method: scan all edges and delete anything referencing this node
+            foreach (i, edge; this.edges) {
+                if (edge.src == node || edge.dst == node) {
+                    remove_edge(edge);
+                }
+            }
 
             return true;
         }
