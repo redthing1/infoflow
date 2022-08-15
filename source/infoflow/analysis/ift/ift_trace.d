@@ -561,7 +561,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // we should record this as a leaf source
 
                     // treat PC as a deterministic register
-                    curr.node.type = InfoType.DeterministicRegister;
+                    curr.node.type = InfoType.DeterminateRegister;
 
                     auto leaf = InfoLeaf(curr.node, curr.owner_commit_ix);
                     add_info_leaf(curr, leaf);
@@ -578,6 +578,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // this counts as a leaf node
 
                     auto leaf = InfoLeaf(curr.node, -1); // the current node came from the initial snapshot
+
+                    // add the deterministic flag
+                    curr.node.type |= InfoType.DeterminateValue;
+
                     add_info_leaf(curr, leaf);
                     mixin(LOG_DEBUG!(`format("   leaf (pre-initial): %s", leaf)`));
 

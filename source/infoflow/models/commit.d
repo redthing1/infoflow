@@ -145,14 +145,17 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
     enum InfoType {
         Unknown = 0x0,
         None = 0x1,
-        Register = 1 << 2,
-        Memory = 1 << 3,
-        Immediate = 1 << 4,
+        Register = 1 << 2, // an abstract register
+        Memory = 1 << 3, // an abstract memory cell
+        Immediate = 1 << 4, // an immediate value
         Combined = Register | Memory | Immediate,
-        Device = 1 << 6,
-        CSR = (1 << 7),
-        MMIO = Memory | Device,
-        DeterministicRegister = Register | (1 << 8),
+        Device = 1 << 6, // a device value
+        CSR = (1 << 7), // a csr
+        MMIO = Memory | Device, // a mmio value
+        DeterminateValue = 1 << 8, // a value that is always the same within a given trace
+        DeterminateRegister = Register | DeterminateValue,
+        DeterminateMemory = Memory | DeterminateValue,
+        DeterminateCSR = CSR | DeterminateValue,
         Indeterminate = 1 << 9,
         IndeterminateRegister = Register | Indeterminate,
         IndeterminateMemory = Memory | Indeterminate,
@@ -179,9 +182,13 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
 
             switch (type) {
             case InfoType.Register:
+            case InfoType.DeterminateRegister:
+            case InfoType.IndeterminateRegister:
                 sb ~= format("%s=$%04x", data.to!TRegSet, value);
                 break;
             case InfoType.Memory:
+            case InfoType.DeterminateMemory:
+            case InfoType.IndeterminateMemory:
                 sb ~= format("mem[$%08x]=%02x", data, value);
                 break;
             case InfoType.Immediate:
@@ -196,15 +203,6 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             case InfoType.MMIO:
                 sb ~= format("mmio[$%04x]=%02x", data, value);
                 break;
-            case InfoType.DeterministicRegister:
-                sb ~= format("%s=$%04x", data.to!TRegSet, value);
-                break;
-            case InfoType.IndeterminateRegister:
-                sb ~= format("%s=$%04x", data.to!TRegSet, value);
-                break;
-            case InfoType.IndeterminateMemory:
-                sb ~= format("mem[$%08x]=%02x", data, value);
-                break;
             default:
                 assert(0, format("unhandled info node to string for type %s", type));
             }
@@ -218,7 +216,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
                 || type == InfoType.Device
                 || type == InfoType.CSR
                 || type == InfoType.MMIO
-                || type == InfoType.DeterministicRegister;
+                || (type & InfoType.DeterminateValue) != 0;
         }
 
         ///  whether this is a deterministic source (will always have the same value)
