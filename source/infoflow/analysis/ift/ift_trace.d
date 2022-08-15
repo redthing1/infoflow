@@ -434,8 +434,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 // update node flags
                 auto vert_flags = IFTGraphNode.Flags.None;
-                if (curr_node.is_final()) vert_flags |- IFTGraphNode.Flags.Final;
-                if (curr_node.is_deterministic()) vert_flags |- IFTGraphNode.Flags.Deterministic;
+                if (curr_node.is_final()) vert_flags |= IFTGraphNode.Flags.Final;
+                if (curr_node.is_deterministic()) vert_flags |= IFTGraphNode.Flags.Deterministic;
                 graph_node_flags[curr_graph_vert] = vert_flags;
 
                 // connect ourselves to our parent (parent comes in the future, so edge us -> parent)
