@@ -864,7 +864,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // for each leaf node, propagate the flags to nodes they point to
             import std.algorithm.searching: countUntil;
 
-            mixin(LOG_INFO!(`" propagating all leaf nodes"`));
+            mixin(LOG_INFO!(`format(" propagating %d leaf nodes", propagated_leaf_nodes.length)`));
 
             foreach (i, leaf; propagated_leaf_nodes.data) {
                 mixin(LOG_TRACE!(`format(" propagating flags for node: %s", leaf)`));
