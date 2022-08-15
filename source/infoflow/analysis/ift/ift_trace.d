@@ -102,6 +102,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             calculate_commit_indexes();
             analyze_flows();
             if (enable_ift_graph && enable_ift_subtree) {
+                rebuild_graph_caches();
+                propagate_node_flags();
                 analyze_subtrees();
             }
 
@@ -937,21 +939,21 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
         }
 
+        void rebuild_graph_caches() {
+            // rebuild caches for the graph
+            mixin(LOG_INFO!(`"rebuilding graph caches"`));
+            ift_graph.rebuild_neighbors_cache();
+            mixin(LOG_INFO!(`" done building graph caches"`));
+        }
+
         void analyze_subtrees() {
             mixin(LOG_INFO!(`"analyzing subtrees"`));
-
-            // rebuild caches for the graph
-            mixin(LOG_INFO!(`" building graph caches"`));
-            ift_graph.rebuild_neighbors_cache();
-            mixin(LOG_INFO!(`"  done building graph caches"`));
-
-            propagate_node_flags();
 
             auto num_final_graph_verts = final_graph_verts.length;
             foreach (i, final_vert; final_graph_verts) {
                 // analyze the subtree from this vert
                 // mixin(LOG_INFO!(`" analyzing subtrees for vert: %s", final_vert`));
-                mixin(LOG_INFO!(`" analyzing subtrees for vert (%d/%d): %s", i, num_final_graph_verts, final_vert`));
+                mixin(LOG_TRACE!(`" analyzing subtrees for vert (%d/%d): %s", i, num_final_graph_verts, final_vert`));
 
                 // auto dep_subtree = find_graph_node_dependency_subtree(final_vert);
 
