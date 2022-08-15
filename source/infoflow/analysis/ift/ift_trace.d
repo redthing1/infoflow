@@ -56,8 +56,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             shared long log_graph_nodes_walked;
             shared long log_graph_nodes_cache_hits;
             shared long log_graph_nodes_cache_misses;
-
             shared long log_global_node_walk_duplicates;
+            shared long log_propagation_nodes_walked;
         }
         ulong log_analysis_time;
 
@@ -93,6 +93,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 log_graph_nodes_walked = 0;
                 log_graph_nodes_cache_hits = 0;
                 log_graph_nodes_cache_misses = 0;
+                log_global_node_walk_duplicates = 0;
+                log_propagation_nodes_walked = 0;
             }
 
             // calculate diffs and clobber
@@ -861,6 +863,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // for each leaf node, propagate the flags to nodes they point to
             import std.algorithm.searching: countUntil;
 
+            mixin(LOG_INFO!(`" propagating all leaf nodes"`));
+
             foreach (i, leaf; propagated_leaf_nodes.data) {
                 mixin(LOG_TRACE!(`format(" propagating flags for node: %s", leaf)`));
                 // auto subtree_verts = find_graph_node_dependency_subtree(leaf);
@@ -875,10 +879,14 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 unvisited.insertFront(leaf);
 
+                long propagation_nodes_walked_acc = 0;
+
                 while (!unvisited.empty) {
                     auto curr = unvisited.front;
                     unvisited.removeFront();
                     visited[curr] = true;
+
+                    propagation_nodes_walked_acc += 1;
 
                     mixin(LOG_DEBUG!(`format("  visiting node: %s", curr)`));
 
@@ -924,6 +932,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         }
                     }
                 }
+
+                version (analysis_log)
+                    atomicOp!"+="(this.log_propagation_nodes_walked, propagation_nodes_walked_acc);
             }
         }
 
