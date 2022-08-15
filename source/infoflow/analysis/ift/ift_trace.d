@@ -22,7 +22,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
     alias IFTGraph = TIFTAnalysisGraph.IFTGraph;
     alias IFTGraphNode = TIFTAnalysisGraph.IFTGraphNode;
     alias IFTGraphEdge = TIFTAnalysisGraph.IFTGraphEdge;
-    alias IFTGraphSubtree = TIFTAnalysisGraph.IFTGraphSubtree;
 
     static assert([EnumMembers!TRegSet].map!(x => x.to!string)
             .canFind!(x => x == "PC"),
@@ -36,8 +35,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
         bool enable_ift_graph = false;
         IFTGraph ift_graph = new IFTGraph();
-        bool enable_ift_subtree = false;
-        IFTGraphSubtree[] ift_subtrees;
+        bool enable_ift_graph_analysis = false;
 
         bool aggressive_revisit_skipping = false;
         shared bool[InfoNodeWalk] global_node_walk_visited;
@@ -101,10 +99,12 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             calculate_clobber();
             calculate_commit_indexes();
             analyze_flows();
-            if (enable_ift_graph && enable_ift_subtree) {
-                rebuild_graph_caches();
-                propagate_node_flags();
-                analyze_subtrees();
+
+            if (enable_ift_graph) {
+                if (enable_ift_graph_analysis) {
+                    rebuild_graph_caches();
+                    propagate_node_flags();
+                }
             }
 
             MonoTime tmr_end = MonoTime.currTime;
@@ -791,7 +791,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             struct SubtreeSearchWalk {
                 IFTGraphNode node;
                 size_t depth;
-                IFTGraphSubtree parent;
+                // IFTGraphSubtree parent;
             }
 
             auto unvisited = DList!SubtreeSearchWalk();
@@ -800,10 +800,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // IFTGraphNode[] subtree_nodes;
             auto subtree_nodes = appender!(IFTGraphNode[]);
 
-            auto root_subtree = new IFTGraphSubtree(node_root);
+            // auto root_subtree = new IFTGraphSubtree(node_root);
 
             // add initial node to the unvisited list
-            unvisited.insertFront(SubtreeSearchWalk(node_root, 0, root_subtree));
+            unvisited.insertFront(SubtreeSearchWalk(node_root, 0));
 
             mixin(LOG_DEBUG!(`format(" building dependency subtree for node: %s", node_root)`));
 
@@ -832,7 +832,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                             .src));
 
                     // auto dep_walk = SubtreeSearchWalk(dep.src, curr.depth + 1, subtree_node);
-                    auto dep_walk = SubtreeSearchWalk(dep.src, curr.depth + 1, null);
+                    auto dep_walk = SubtreeSearchWalk(dep.src, curr.depth + 1);
                     // NOTE: a node can be queued multiple times at different depths
 
                     // if we have not visited this dependency yet, add it to the unvisited list
