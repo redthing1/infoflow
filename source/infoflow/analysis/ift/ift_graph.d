@@ -129,6 +129,25 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             _node_neighbors_to_cache[edge.dst] ~= edge;
         }
 
+        bool edge_exists(IFTGraphEdge edge, bool cache_only = false) {
+            if (_find_edge_cache(edge))
+                return true;
+            
+            if (cache_only) return false;
+            
+            // linear search
+            for (long i = 0; i < edges.length; i++) {
+                if (edges[i] == edge) {
+                    // cache it
+                    _store_edge_cache(edge, true);
+                    return true;
+                }
+            }
+
+            // not found
+            return false;
+        }
+
         IFTGraphEdge get_edge_ix(ulong index) {
             return edges[index];
         }

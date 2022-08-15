@@ -449,7 +449,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 mixin(LOG_DEBUG!(
                         `format("   adding graph edge: %s -> %s", curr_graph_vert, parent_vert)`));
 
-                ift_graph.add_edge(IFTGraphEdge(curr_graph_vert, parent_vert));
+                auto graph_edge = IFTGraphEdge(curr_graph_vert, parent_vert);
+                if (!ift_graph.edge_exists(graph_edge, true)) {
+                    ift_graph.add_edge(graph_edge);
+                }
 
                 return curr_graph_vert;
             }
