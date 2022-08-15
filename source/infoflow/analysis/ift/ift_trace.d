@@ -436,6 +436,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         graph_nodes_cache_misses_acc++;
                 }
 
+                mixin(LOG_DEBUG!(
+                        `format("   added graph node: %s", curr_graph_vert)`));
+
                 // update node flags
                 auto vert_flags = IFTGraphNode.Flags.Propagated;
                 if (curr_node.is_final()) vert_flags |= IFTGraphNode.Flags.Final;
