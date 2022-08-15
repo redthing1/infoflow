@@ -480,8 +480,17 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             Nullable!IFTGraphNode maybe_last_node_vert;
             if (enable_ift_graph) {
                 // add our "last node" to the graph
-                auto last_node_vert = new IFTGraphNode(InfoView(last_node, last_node_last_touch_ix));
-                ift_graph.add_node(last_node_vert);
+                
+                IFTGraphNode last_node_vert;
+
+                auto cached_graph_vert = ift_graph.find_in_cache(last_node_last_touch_ix, last_node);
+                if (cached_graph_vert) {
+                    last_node_vert = cached_graph_vert;
+                } else {
+                    last_node_vert = new IFTGraphNode(InfoView(last_node, last_node_last_touch_ix));
+                    ift_graph.add_node(last_node_vert);
+                }
+
 
                 maybe_last_node_vert = last_node_vert;
             }
