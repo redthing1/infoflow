@@ -433,7 +433,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 }
 
                 // update node flags
-                auto vert_flags = IFTGraphNode.Flags.None;
+                auto vert_flags = IFTGraphNode.Flags.Propagated;
                 if (curr_node.is_final()) vert_flags |= IFTGraphNode.Flags.Final;
                 if (curr_node.is_deterministic()) vert_flags |= IFTGraphNode.Flags.Deterministic;
                 curr_graph_vert.flags = vert_flags;
@@ -873,7 +873,24 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // propagate the flow of node flags
             mixin(LOG_INFO!(`"propagating node flags"`));
 
+            // make a list of leaf nodes that already are propagated
+            // IFTGraphNode[] propagated_leaf_nodes;
+            auto propagated_leaf_nodes = appender!(IFTGraphNode[]);
+            foreach (i, vert; ift_graph.nodes) {
+                if ((vert.flags & IFTGraphNode.Flags.Propagated) > 0) {
+                    propagated_leaf_nodes ~= vert;
+                }
+            }
 
+            // for each leaf node, propagate the flags to nodes they point to
+            foreach (i, leaf; propagated_leaf_nodes.data) {
+                mixin(LOG_INFO!(`format(" propagating flags for node: %s", leaf)`));
+                // auto subtree = find_graph_node_dependency_subtree(leaf);
+                // foreach (i, child; subtree.children) {
+                //     mixin(LOG_INFO!(`format("  propagating flags for child: %s", child)`));
+                //     child.node.flags |= leaf.flags;
+                // }
+            }
         }
 
         void analyze_subtrees() {

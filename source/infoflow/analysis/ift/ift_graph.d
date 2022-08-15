@@ -211,7 +211,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             Final = 1 << 0,
             Deterministic = 1 << 1,
             Inner = 1 << 2,
-            Reserved2 = 1 << 3,
+            Propagated = 1 << 3,
             Reserved3 = 1 << 4,
             Reserved4 = 1 << 5,
             Reserved5 = 1 << 6,
