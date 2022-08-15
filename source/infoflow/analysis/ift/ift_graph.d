@@ -43,16 +43,16 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
                 return null;
             }
 
-            private void _store_cached(ulong commit_id, InfoNode node, IFTGraphNode vert) {
+            private void _store_vert_cache(ulong commit_id, InfoNode node, IFTGraphNode vert) {
                 // _nodes_by_commit_cache[node.info_view.commit_id][node.info_view.node] = node;
                 _nodes_by_commit_cache[commit_id][node] = vert;
             }
 
-            private void _clear_cached(ulong commit_id) {
+            private void _clear_vert_cache(ulong commit_id) {
                 _nodes_by_commit_cache[commit_id] = null;
             }
 
-            private void _remove_cached(ulong commit_id, InfoNode node) {
+            private void _remove_vert_cache(ulong commit_id, InfoNode node) {
                 _nodes_by_commit_cache[commit_id].remove(node);
             }
         }
@@ -65,7 +65,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             nodes ~= node;
             // cache it
             // _nodes_by_commit_cache[node.info_view.commit_id][node.info_view.node] = node;
-            _store_cached(node.info_view.commit_id, node.info_view.node, node);
+            _store_vert_cache(node.info_view.commit_id, node.info_view.node, node);
         }
 
         IFTGraphNode find_in_cache(ulong commit_id, InfoNode node) {
@@ -82,7 +82,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             for (long i = 0; i < nodes.length; i++) {
                 if (nodes[i].info_view.commit_id == commit_id && nodes[i].info_view.node == node) {
                     // cache it
-                    _store_cached(commit_id, node, nodes[i]);
+                    _store_vert_cache(commit_id, node, nodes[i]);
                     return nodes[i];
                 }
             }
@@ -95,23 +95,93 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             return nodes[index];
         }
 
-        bool[IFTGraphEdge] _edge_cache;
+        alias GraphEdges = IFTGraphEdge[];
+        private bool[IFTGraphEdge] _edge_cache;
+        /// neighbors that have edges going from this node
+        private GraphEdges[IFTGraphNode] _node_neighbors_from_cache;
+        /// neighbors that have edges coming to this node
+        private GraphEdges[IFTGraphNode] _node_neighbors_to_cache;
 
         pragma(inline, true) {
-            private void _store_edge_cache(IFTGraphEdge edge, bool value) {
-                _edge_cache[edge] = value;
+            private void _store_edge_cache(IFTGraphEdge edge) {
+                _edge_cache[edge] = true;
+            }
+
+            private void _remove_edge_cache(IFTGraphEdge edge) {
+                _edge_cache.remove(edge);
             }
 
             private bool _find_edge_cache(IFTGraphEdge edge) {
-                if (edge in _edge_cache)
-                    return _edge_cache[edge];
+                return _edge_cache.get(edge, false);
+            }
+
+            private void _store_neighbors_to_cache(IFTGraphNode node, IFTGraphEdge edge) {
+                if (node !in _node_neighbors_to_cache)
+                    _node_neighbors_to_cache[node] = [];
+                _node_neighbors_to_cache[node] ~= edge;
+            }
+
+            private void _store_neighbors_from_cache(IFTGraphNode node, IFTGraphEdge edge) {
+                if (node !in _node_neighbors_from_cache)
+                    _node_neighbors_from_cache[node] = [];
+                _node_neighbors_from_cache[node] ~= edge;
+            }
+
+            private void _store_neighbors_to_cache(IFTGraphNode node, IFTGraphEdge[] edges) {
+                _node_neighbors_to_cache[node] = edges;
+            }
+
+            private void _store_neighbors_from_cache(IFTGraphNode node, IFTGraphEdge[] edges) {
+                _node_neighbors_from_cache[node] = edges;
+            }
+
+            private bool _remove_neighbors_to_cache(IFTGraphNode node, IFTGraphEdge edge) {
+                auto list = _node_neighbors_to_cache[node];
+                auto list_ix = list.countUntil(edge);
+                if (list_ix < 0 || list_ix >= list.length)
+                    return false;
+                _node_neighbors_to_cache[node] = list.remove(list_ix);
+                return true;
+            }
+
+            private bool _remove_neighbors_from_cache(IFTGraphNode node, IFTGraphEdge edge) {
+                auto list = _node_neighbors_from_cache[node];
+                auto list_ix = list.countUntil(edge);
+                if (list_ix < 0 || list_ix >= list.length)
+                    return false;
+                _node_neighbors_from_cache[node] = list.remove(list_ix);
+                return true;
+            }
+
+            private bool _find_neighbors_to_cache(IFTGraphNode node, out GraphEdges res) {
+                if (node in _node_neighbors_to_cache) {
+                    res = _node_neighbors_to_cache[node];
+                    return true;
+                }
                 return false;
             }
-        }
 
-        alias GraphEdges = IFTGraphEdge[];
-        GraphEdges[IFTGraphNode] _node_neighbors_from_cache;
-        GraphEdges[IFTGraphNode] _node_neighbors_to_cache;
+            private bool _find_neighbors_from_cache(IFTGraphNode node, out GraphEdges res) {
+                if (node in _node_neighbors_from_cache) {
+                    res = _node_neighbors_from_cache[node];
+                    return true;
+                }
+                return false;
+            }
+
+            private void _clear_neighbors_to_cache(IFTGraphNode node) {
+                _node_neighbors_to_cache[node] = [];
+            }
+
+            private void _clear_neighbors_from_cache(IFTGraphNode node) {
+                _node_neighbors_from_cache[node] = [];
+            }
+
+            private void _rehash_neighbors_cache() {
+                _node_neighbors_from_cache.rehash();
+                _node_neighbors_to_cache.rehash();
+            }
+        }
 
         void add_edge(IFTGraphEdge edge) {
             // // ensure no duplicate exists
@@ -120,30 +190,26 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             edges ~= edge;
 
             // cache it
-            _store_edge_cache(edge, true);
-            
-            // add to the neighbor lists
-            if (edge.src !in _node_neighbors_from_cache) {
-                _node_neighbors_from_cache[edge.src] = [];
-            }
-            _node_neighbors_from_cache[edge.src] ~= edge;
-            if (edge.dst !in _node_neighbors_to_cache) {
-                _node_neighbors_to_cache[edge.dst] = [];
-            }
-            _node_neighbors_to_cache[edge.dst] ~= edge;
+            _store_edge_cache(edge);
+
+            // store in src's "to" list
+            _store_neighbors_to_cache(edge.src, edge);
+            // store in dst's "from" list
+            _store_neighbors_from_cache(edge.dst, edge);
         }
 
         bool edge_exists(IFTGraphEdge edge, bool cache_only = false) {
             if (_find_edge_cache(edge))
                 return true;
-            
-            if (cache_only) return false;
-            
+
+            if (cache_only)
+                return false;
+
             // linear search
             for (long i = 0; i < edges.length; i++) {
                 if (edges[i] == edge) {
                     // cache it
-                    _store_edge_cache(edge, true);
+                    _store_edge_cache(edge);
                     return true;
                 }
             }
@@ -164,44 +230,21 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             return filter!(edge => edge.dst == node)(edges);
         }
 
-        void rebuild_neighbors_cache() {
-            import std.parallelism: parallel;
-
-            // clear the caches
-            _node_neighbors_from_cache.clear();
-            _node_neighbors_to_cache.clear();
-
-            // for each node, build a list of neighbors, pointing to and from
-            // for (size_t i = 0; i < nodes.length; i++) {
-            //     IFTGraphNode node = nodes[i];
-
-            //     _node_neighbors_from_cache[node] = filter_edges_from(node).array;
-            //     _node_neighbors_to_cache[node] = filter_edges_to(node).array;
-            // }
-            foreach (i, node; parallel(nodes)) {
-                auto edges_from = filter_edges_from(node).array;
-                auto edges_to = filter_edges_to(node).array;
-
-                synchronized (this) {
-                    _node_neighbors_from_cache[node] = edges_from;
-                    _node_neighbors_to_cache[node] = edges_to;
-                }
-            }
-
-            _node_neighbors_from_cache.rehash();
-            _node_neighbors_to_cache.rehash();
-        }
-
+        /// get edges going from this node
         IFTGraphEdge[] get_edges_from(IFTGraphNode node) {
-            // check cache
-            if (node in _node_neighbors_from_cache)
-                return _node_neighbors_from_cache[node];
+            GraphEdges cache_res;
+            if (_find_neighbors_from_cache(node, cache_res))
+                return cache_res;
+            // linear search
             return filter_edges_from(node).array;
         }
 
+        /// get edges coming to this node
         IFTGraphEdge[] get_edges_to(IFTGraphNode node) {
-            if (node in _node_neighbors_to_cache)
-                return _node_neighbors_to_cache[node];
+            GraphEdges cache_res;
+            if (_find_neighbors_to_cache(node, cache_res))
+                return cache_res;
+            // linear search
             return filter_edges_to(node).array;
         }
 
@@ -212,8 +255,9 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
                 return false;
             // enforce(this.nodes[node_ix] == node, "node mismatch");
             this.nodes = this.nodes.remove(node_ix);
+
             // delete the node from the cache
-            _remove_cached(node.info_view.commit_id, node.info_view.node);
+            _remove_vert_cache(node.info_view.commit_id, node.info_view.node);
 
             delete_edges_touching(node);
 
@@ -239,30 +283,44 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
 
         bool remove_edge(IFTGraphEdge edge) {
             // delete the edge from the list of edges
-            // auto edge_count_prev = edges.length;
             auto edge_ix = edges.countUntil(edge);
             if (edge_ix == -1)
                 return false;
             this.edges = this.edges.remove(edge_ix);
 
             // delete the edge from the caches
-            _store_edge_cache(edge, false);
-            _edge_cache.remove(edge);
-
-            // auto old_from_nb_length = _node_neighbors_from_cache[edge.src].length;
+            _remove_edge_cache(edge);
 
             // delete the edge from the neighbor lists
-            auto from_neighbors = _node_neighbors_from_cache[edge.src];
-            auto to_neighbors = _node_neighbors_to_cache[edge.dst];
-            _node_neighbors_from_cache[edge.src] = from_neighbors.remove(from_neighbors.countUntil(edge));
-            _node_neighbors_to_cache[edge.dst] = to_neighbors.remove(to_neighbors.countUntil(edge));
-
-            // auto edge_count_diff = edge_count_prev - edges.length;
-            // enforce(edge_count_diff == 1, format("edge count diff: %d", edge_count_diff));
-            // auto from_nb_length_diff = old_from_nb_length - _node_neighbors_from_cache[edge.src].length;
-            // enforce(from_nb_length_diff == 1, format("from nb length diff: %d", from_nb_length_diff));
+            // delete from src's "to" list
+            _remove_neighbors_to_cache(edge.src, edge);
+            // delete from dst's "from" list
+            _remove_neighbors_from_cache(edge.dst, edge);
 
             return true;
+        }
+
+        void rebuild_neighbors_cache() {
+            import std.parallelism : parallel;
+
+            // for each node, build a list of neighbors, pointing to and from
+            foreach (i, node; parallel(nodes)) {
+                // clear the caches
+                _clear_neighbors_to_cache(node);
+                _clear_neighbors_from_cache(node);
+
+                // get all edges to and from this node
+                auto edges_to = filter_edges_to(node).array;
+                auto edges_from = filter_edges_from(node).array;
+
+                synchronized (this) {
+                    // store in the cache
+                    _store_neighbors_to_cache(node, edges_to);
+                    _store_neighbors_from_cache(node, edges_from);
+                }
+            }
+
+            _rehash_neighbors_cache();            
         }
 
         @property size_t num_verts() {
