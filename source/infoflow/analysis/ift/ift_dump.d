@@ -184,19 +184,21 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
             writefln("   verts: %s", ift.ift_graph.num_verts);
             writefln("   edges: %s", ift.ift_graph.num_edges);
 
-            // dump all ift subtrees
-            writefln(" dependency subtrees:");
-            foreach (subtree; ift.ift_subtrees) {
-                import std.array: split;
-                import std.string: strip;
+            // // dump all ift subtrees
+            // writefln(" dependency subtrees:");
+            // foreach (subtree; ift.ift_subtrees) {
+            //     import std.array: split;
+            //     import std.string: strip;
 
-                writefln("  subtree for: %s", subtree.node);
-                auto subtree_dump = subtree.dump();
-                foreach (line; subtree_dump.split("\n")) {
-                    if (line.strip().length == 0) break;
-                    writefln("  %s", line);
-                }
-            }
+            //     writefln("  subtree for: %s", subtree.node);
+            //     auto subtree_dump = subtree.dump();
+            //     foreach (line; subtree_dump.split("\n")) {
+            //         if (line.strip().length == 0) break;
+            //         writefln("  %s", line);
+            //     }
+            // }
+
+            // if graph analysis enabled, dump detailed stats            
         }
 
         void export_graph_to(string output) {
@@ -218,7 +220,20 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
             with (g) {
                 foreach (ift_vert; ift.ift_graph.nodes) {
                     // node(node, ["shape": "box", "color": "#ff0000"]);
-                    node(ift_vert, ["shape": "box", "label": ift_vert.toString()]);
+                    enum default_color = "#000000";
+                    enum final_color = "#ef9148";
+                    enum deterministic_color = "#1ABA8B";
+
+                    auto node_color = default_color;
+
+                    if ((ift_vert.flags & IFTGraphNode.Flags.Deterministic) > 0) {
+                        node_color = deterministic_color;
+                    } else if ((ift_vert.flags & IFTGraphNode.Flags.Final) > 0) {
+                        node_color = final_color;
+                    }
+
+                    // set color according to flags
+                    node(ift_vert, ["shape": "box", "label": ift_vert.toString(), "color": node_color]);
                 }
                 foreach (ift_edge; ift.ift_graph.edges) {
                     // edge(edge.src, edge.dst, ["style": "dashed", "label": edge.label]);
