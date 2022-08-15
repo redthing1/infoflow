@@ -200,9 +200,23 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
     final class IFTGraphNode {
         /// the information as it existed in a point in time
         InfoView info_view;
+        Flags flags = Flags.None;
 
         this(InfoView info_view) {
             this.info_view = info_view;
+        }
+
+        enum Flags {
+            None = 0x0,
+            Final = 1 << 0,
+            Deterministic = 1 << 1,
+            Inner = 1 << 2,
+            Reserved2 = 1 << 3,
+            Reserved3 = 1 << 4,
+            Reserved4 = 1 << 5,
+            Reserved5 = 1 << 6,
+            Reserved6 = 1 << 7,
+            Reserved7 = 1 << 8,
         }
 
         override string toString() const {

@@ -382,12 +382,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             Nullable!IFTGraphNode maybe_graph_vert;
         }
 
-        struct IFTGraphNodeFlags {
-            bool is_final;
-            bool is_deterministic;
-        }
-        IFTGraphNodeFlags[IFTGraphNode] graph_node_flags;
-
         InformationFlowBacktrace backtrace_information_flow(InfoNode last_node) {
             mixin(LOG_INFO!(`format("backtracking information flow for node: %s", last_node)`));
 
@@ -439,8 +433,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 }
 
                 // update node flags
-                graph_node_flags[curr_graph_vert] = 
-                    IFTGraphNodeFlags(curr_node.is_final(), curr_node.is_deterministic());
+                auto vert_flags = IFTGraphNode.Flags.None;
+                if (curr_node.is_final()) vert_flags |- IFTGraphNode.Flags.Final;
+                if (curr_node.is_deterministic()) vert_flags |- IFTGraphNode.Flags.Deterministic;
+                graph_node_flags[curr_graph_vert] = vert_flags;
 
                 // connect ourselves to our parent (parent comes in the future, so edge us -> parent)
                 mixin(LOG_DEBUG!(
@@ -608,6 +604,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                                 `format("    parent is same as current node, skipping adding vert")`));
                         maybe_curr_graph_vert = parent;
                     }
+
+                    // update node flags
+                    maybe_curr_graph_vert.get.flags = IFTGraphNode.Flags.Inner;
                 }
 
                 // get all dependencies of this commit
