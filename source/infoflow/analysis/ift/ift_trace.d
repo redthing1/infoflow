@@ -382,6 +382,12 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             Nullable!IFTGraphNode maybe_graph_vert;
         }
 
+        struct IFTGraphNodeFlags {
+            bool is_final;
+            bool is_deterministic;
+        }
+        IFTGraphNodeFlags[IFTGraphNode] graph_node_flags;
+
         InformationFlowBacktrace backtrace_information_flow(InfoNode last_node) {
             mixin(LOG_INFO!(`format("backtracking information flow for node: %s", last_node)`));
 
@@ -431,6 +437,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     version (analysis_log)
                         graph_nodes_cache_misses_acc++;
                 }
+
+                // update node flags
+                graph_node_flags[curr_graph_vert] = 
+                    IFTGraphNodeFlags(curr_node.is_final(), curr_node.is_deterministic());
 
                 // connect ourselves to our parent (parent comes in the future, so edge us -> parent)
                 mixin(LOG_DEBUG!(
