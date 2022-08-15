@@ -103,7 +103,7 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
                 unvisited.removeFront();
                 visited[curr] = true;
 
-                mixin(LOG_DEBUG!(`format("    visiting %s", curr)`));
+                mixin(LOG_DEBUG!(`format("    visiting %s to delete from graph", curr)`));
                 
                 // queue neighbors (nodes that point to this one
                 auto targets = ift.ift_graph.get_edges_to(curr);
@@ -115,8 +115,11 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
                     }
                 }
 
-                // delete this node from the graph
-                ift.ift_graph.remove_node(curr);
+                if (curr != det_node) {
+                    // delete this node from the graph
+                    auto remove_result = ift.ift_graph.remove_node(curr);
+                    enforce(remove_result, "failed to remove node from graph");
+                }
             }
         }
     }
