@@ -380,7 +380,8 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
 
             auto sb = appender!string;
 
-            sb ~= format("InfoView(node: %s, commit_id: %s)", node, commit_id);
+            // sb ~= format("InfoView(node: %s, commit_id: %s)", node, commit_id);
+            sb ~= format("InfoView(node: %s, type: %s, commit_id: %s)", node, node.type, commit_id);
 
             return sb.array;
         }
