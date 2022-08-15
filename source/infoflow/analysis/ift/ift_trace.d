@@ -426,18 +426,21 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     // if (likely(cached_graph_vert !is null)) {
                     curr_graph_vert = cached_graph_vert;
 
+                    mixin(LOG_DEBUG!(
+                        `format("   reused graph node: %s", curr_graph_vert)`));
+
                     version (analysis_log)
                         graph_nodes_cache_hits_acc++;
                 } else {
                     curr_graph_vert = new IFTGraphNode(InfoView(curr_node, commit_ix));
                     ift_graph.add_node(curr_graph_vert);
 
+                    mixin(LOG_DEBUG!(
+                        `format("   added graph node: %s", curr_graph_vert)`));
+
                     version (analysis_log)
                         graph_nodes_cache_misses_acc++;
                 }
-
-                mixin(LOG_DEBUG!(
-                        `format("   added graph node: %s", curr_graph_vert)`));
 
                 // update node flags
                 auto vert_flags = IFTGraphNode.Flags.Propagated;
@@ -943,7 +946,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     foreach (k, target; targets) {
                         auto pointed_target = target.dst;
                         if (!visited.get(pointed_target, false)) {
-                            mixin(LOG_DEBUG!(`format("   queuing node: %s", pointed_target)`));
+                            mixin(LOG_DEBUG!(`format("    queuing node: %s", pointed_target)`));
                             unvisited.insertFront(pointed_target);
                         }
                     }

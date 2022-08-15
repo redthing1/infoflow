@@ -118,6 +118,9 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
                 if (curr != det_node) {
                     // delete this node from the graph
                     auto remove_result = ift.ift_graph.remove_node(curr);
+                    if (remove_result) {
+                        mixin(LOG_DEBUG!(`format("     removed node %s", curr)`));
+                    }
                     // enforce(remove_result, "failed to remove node from graph");
                 }
             }

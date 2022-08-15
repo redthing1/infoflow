@@ -210,7 +210,8 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             auto node_ix = nodes.countUntil(node);
             if (node_ix == -1)
                 return false;
-            nodes = nodes.remove(node_ix);
+            // enforce(this.nodes[node_ix] == node, "node mismatch");
+            this.nodes = this.nodes.remove(node_ix);
             // delete the node from the cache
             _remove_cached(node.info_view.commit_id, node.info_view.node);
             // delete all edges to and from the node
@@ -223,22 +224,40 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
                 remove_edge(edge);
             }
 
+            // // stupid method: scan all edges and delete anything referencing this node
+            // foreach (i, edge; this.edges) {
+            //     if (edge.src == node || edge.dst == node) {
+            //         remove_edge(edge);
+            //     }
+            // }
+
             return true;
         }
 
         bool remove_edge(IFTGraphEdge edge) {
             // delete the edge from the list of edges
+            // auto edge_count_prev = edges.length;
             auto edge_ix = edges.countUntil(edge);
             if (edge_ix == -1)
                 return false;
-            edges = edges.remove(edge_ix);
+            this.edges = this.edges.remove(edge_ix);
+
             // delete the edge from the caches
             _store_edge_cache(edge, false);
+            _edge_cache.remove(edge);
+
+            // auto old_from_nb_length = _node_neighbors_from_cache[edge.src].length;
+
             // delete the edge from the neighbor lists
             auto from_neighbors = _node_neighbors_from_cache[edge.src];
             auto to_neighbors = _node_neighbors_to_cache[edge.dst];
-            from_neighbors = from_neighbors.remove(from_neighbors.countUntil(edge));
-            to_neighbors = to_neighbors.remove(to_neighbors.countUntil(edge));
+            _node_neighbors_from_cache[edge.src] = from_neighbors.remove(from_neighbors.countUntil(edge));
+            _node_neighbors_to_cache[edge.dst] = to_neighbors.remove(to_neighbors.countUntil(edge));
+
+            // auto edge_count_diff = edge_count_prev - edges.length;
+            // enforce(edge_count_diff == 1, format("edge count diff: %d", edge_count_diff));
+            // auto from_nb_length_diff = old_from_nb_length - _node_neighbors_from_cache[edge.src].length;
+            // enforce(from_nb_length_diff == 1, format("from nb length diff: %d", from_nb_length_diff));
 
             return true;
         }
