@@ -436,7 +436,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 auto vert_flags = IFTGraphNode.Flags.None;
                 if (curr_node.is_final()) vert_flags |= IFTGraphNode.Flags.Final;
                 if (curr_node.is_deterministic()) vert_flags |= IFTGraphNode.Flags.Deterministic;
-                graph_node_flags[curr_graph_vert] = vert_flags;
+                curr_graph_vert.flags = vert_flags;
 
                 // connect ourselves to our parent (parent comes in the future, so edge us -> parent)
                 mixin(LOG_DEBUG!(
@@ -869,7 +869,16 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             return root_subtree;
         }
 
+        void propagate_node_flags() {
+            // propagate the flow of node flags
+            mixin(LOG_INFO!(`"propagating node flags"`));
+
+
+        }
+
         void analyze_subtrees() {
+            propagate_node_flags();
+
             mixin(LOG_INFO!(`"analyzing subtrees"`));
 
             // rebuild caches for the graph
