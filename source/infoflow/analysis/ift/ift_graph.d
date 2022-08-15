@@ -58,6 +58,10 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
         }
 
         void add_node(IFTGraphNode node) {
+            // ensure no duplicate exists
+            enforce(!_find_cached(node.info_view.commit_id, node.info_view.node),
+                format("attempt to add duplicate node: %s", node));
+
             nodes ~= node;
             // cache it
             // _nodes_by_commit_cache[node.info_view.commit_id][node.info_view.node] = node;
