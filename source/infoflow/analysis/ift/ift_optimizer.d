@@ -26,6 +26,8 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
 
         bool enable_prune_deterministic_subtrees = true;
 
+        ulong log_analysis_time;
+
         this(IFTAnalyzer ift) {
             this.ift = ift;
 
@@ -35,11 +37,23 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
         }
 
         void optimize() {
+            MonoTime tmr_start = MonoTime.currTime;
+
             build_caches();
 
             if (enable_prune_deterministic_subtrees) {
                 prune_deterministic_subtrees();
             }
+
+            MonoTime tmr_end = MonoTime.currTime;
+            auto elapsed = tmr_end - tmr_start;
+
+            log_analysis_time = elapsed.total!"usecs";
+        }
+
+        void dump_summary() {
+            writefln("  analysis time:          %7ss", (
+                    cast(double) log_analysis_time / 1_000_000));
         }
 
         void build_caches() {
