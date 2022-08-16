@@ -28,6 +28,8 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
 
         ulong log_analysis_time;
 
+        shared bool[IFTGraphNode] pruned_nodes;
+
         this(IFTAnalyzer ift) {
             this.ift = ift;
 
@@ -116,6 +118,15 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
                 auto curr = unvisited.front;
                 unvisited.removeFront();
                 visited[curr] = true;
+
+                synchronized {
+                    if (curr in pruned_nodes) {
+                        // node has already been pruned
+                        continue;
+                    }
+                    // mark node as pruned
+                    pruned_nodes[curr] = true;
+                }
 
                 mixin(LOG_DEBUG!(`format("    visiting %s to delete from graph", curr)`));
                 
