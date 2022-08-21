@@ -742,7 +742,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 clobbered_regs_sources[cast(TRegSet) last_node.data] = reg_backtrace
                     .terminal_leaves;
 
-                if (ift_graph) {
+                if (enable_ift_graph) {
                     final_graph_verts ~= reg_backtrace.maybe_graph_vert.get;
                 }
             }
@@ -754,7 +754,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 auto mem_backtrace = backtrace_information_flow(last_node);
                 clobbered_mem_sources[last_node.data] = mem_backtrace.terminal_leaves;
 
-                if (ift_graph) {
+                if (enable_ift_graph) {
                     final_graph_verts ~= mem_backtrace.maybe_graph_vert.get;
                 }
             }
@@ -766,7 +766,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 auto csr_backtrace = backtrace_information_flow(last_node);
                 clobbered_csr_sources[last_node.data] = csr_backtrace.terminal_leaves;
 
-                if (ift_graph) {
+                if (enable_ift_graph) {
                     final_graph_verts ~= csr_backtrace.maybe_graph_vert.get;
                 }
             }
