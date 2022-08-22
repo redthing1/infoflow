@@ -47,6 +47,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         InfoLeafIndices[TRegWord] clobbered_csr_sources;
         IFTGraphNode[] final_graph_verts;
 
+        int parallel_threads = 1;
+
         version (analysis_log) {
             shared long log_visited_info_nodes;
             shared long log_commits_walked;
@@ -774,6 +776,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // select serial/parallel task
             // do work
 
+            auto workTaskPool = new TaskPool(parallel_threads);
+
             auto gen_analyze_work_loops()() {
                 auto sb = appender!string;
 
@@ -786,7 +790,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     `, item, item);
                     sb ~= format(`
                         if (analysis_parallelized) {
-                            auto %s_last_nodes_work = parallel(%s_last_nodes);
+                            auto %s_last_nodes_work = workTaskPool.parallel(%s_last_nodes);
                             %s
                         } else {
                             auto %s_last_nodes_work = %s_last_nodes;
