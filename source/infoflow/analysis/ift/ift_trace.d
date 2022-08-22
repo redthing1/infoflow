@@ -803,6 +803,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             mixin(gen_analyze_work_loops!());
+
+            workTaskPool.finish(true);
         }
 
         IFTGraphNode[] find_graph_node_dependency_subtree(IFTGraphNode node_root) {
