@@ -139,7 +139,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 // 1. find regs that changed
                 for (auto i = 0; i < TInfoLog.REGISTER_COUNT; i++) {
                     TRegSet reg_id = i.to!TRegSet;
-                    if (snap_init.reg[reg_id] != snap_final.reg[reg_id]) {
+                    if (snap_init.reg[reg_id] != snap_final.reg[reg_id] &&
+                        !config.ignored_regs.get(reg_id, false)) {
                         // this TRegSet changed between the initial and final state
                         // store commit that clobbers this TRegSet
                         clobber.effects ~= InfoNode(InfoType.Register, reg_id, snap_final
