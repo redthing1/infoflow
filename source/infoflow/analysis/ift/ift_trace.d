@@ -57,6 +57,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             shared long log_global_node_walk_duplicates;
             shared long log_propagation_nodes_walked;
             ulong log_propagation_time;
+            ulong log_cache_build_time;
         }
         ulong log_analysis_time;
 
@@ -871,7 +872,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // propagate the flow of node flags
             mixin(LOG_INFO!(`"propagating node flags"`));
 
-            auto propagate_start_time = MonoTime.currTime;
+            auto tmr_start = MonoTime.currTime;
 
             // make a list of leaf nodes that already are propagated
             // IFTGraphNode[] propagated_leaf_nodes;
@@ -964,16 +965,21 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     atomicOp!"+="(this.log_propagation_nodes_walked, propagation_nodes_walked_acc);
             }
 
-            auto elapsed = MonoTime.currTime - propagate_start_time;
+            auto elapsed = MonoTime.currTime - tmr_start;
             log_propagation_time = elapsed.total!"usecs";
         }
 
         void rebuild_graph_caches() {
+            auto tmr_start = MonoTime.currTime;
+
             // rebuild caches for the graph
             mixin(LOG_INFO!(`format(
                 "rebuilding graph caches (%d nodes, %d edges)", ift_graph.nodes.length, ift_graph.edges.length)`));
             ift_graph.rebuild_neighbors_cache();
             mixin(LOG_INFO!(`" done building graph caches"`));
+
+            auto elapsed = MonoTime.currTime - tmr_start;
+            log_cache_build_time = elapsed.total!"usecs";
         }
 
         void analyze_subtrees() {
