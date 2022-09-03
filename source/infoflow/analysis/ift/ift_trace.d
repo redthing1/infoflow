@@ -966,7 +966,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             auto elapsed = MonoTime.currTime - tmr_start;
-            log_propagation_time = elapsed.total!"usecs";
+            version (analysis_log)
+                log_propagation_time = elapsed.total!"usecs";
         }
 
         void rebuild_graph_caches() {
@@ -979,7 +980,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             mixin(LOG_INFO!(`" done building graph caches"`));
 
             auto elapsed = MonoTime.currTime - tmr_start;
-            log_cache_build_time = elapsed.total!"usecs";
+            version (analysis_log)
+                log_cache_build_time = elapsed.total!"usecs";
         }
 
         void analyze_subtrees() {
