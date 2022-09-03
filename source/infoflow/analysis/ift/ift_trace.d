@@ -387,7 +387,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         }
 
         InformationFlowBacktrace backtrace_information_flow(InfoNode last_node) {
-            mixin(LOG_INFO!(`format("backtracking information flow for node: %s", last_node)`));
+            mixin(LOG_INFO!(`format("backtracing information flow for node: %s", last_node)`));
 
             // 1. get the commit corresponding to this node
             auto last_node_last_touch_ix =
