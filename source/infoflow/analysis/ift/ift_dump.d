@@ -62,7 +62,7 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                 for (auto i = 0; i < clobbered_csr_ids.length; i++) {
                     auto csr_id = clobbered_csr_ids[i];
                     auto csr_value = clobbered_csr_values[i];
-                    writefln("   csr $%08x <- $%08x", csr_id, csr_value);
+                    writefln("   csr#%x <- $%08x", csr_id, csr_value);
                 }
             }
 
@@ -143,11 +143,11 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
 
             // csr
             foreach (csr_id; ift.clobbered_csr_sources.byKey) {
-                // writefln("  csr $%08x:", csr_id);
-                mixin(LOG_TRACE!(`format("  csr $%08x:", csr_id)`));
+                // writefln("  csr#%x:", csr_id);
+                mixin(LOG_TRACE!(`format("  csr#%x:", csr_id)`));
                 if (csr_id !in ift.clobbered_csr_sources) {
                     // ???
-                    mixin(LOG_ERROR!(`format("  csr $%08x not in clobbered_csr_sources", csr_id)`));
+                    mixin(LOG_ERROR!(`format("  csr#%x not in clobbered_csr_sources", csr_id)`));
                     enforce(0, "csr not in clobbered_csr_sources");
                 }
                 foreach (source_ix; ift.clobbered_csr_sources[csr_id]) {
