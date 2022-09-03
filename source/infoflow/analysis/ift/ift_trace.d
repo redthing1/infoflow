@@ -71,7 +71,22 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             All = (Standard | Special),
         }
 
-        this(CommitTrace commit_trace, bool parallelized = false) {
+        struct Config {
+            this(TRegSet[] ignored_regs, TRegWord[] ignored_csr) {
+                foreach (i, id; ignored_regs)
+                    this.ignored_regs[id] = true;
+                foreach (i, id; ignored_csr)
+                    this.ignored_csr[id] = true;
+            }
+
+            bool[TRegSet] ignored_regs;
+            bool[TRegWord] ignored_csr;
+        }
+
+        Config config;
+
+        this(CommitTrace commit_trace, Config config, bool parallelized = false) {
+            this.config = config;
             super(commit_trace, parallelized);
         }
 
@@ -149,7 +164,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
             if (included_data & IFTDataType.CSR) {
                 foreach (csr_id; snap_init.csr.byKey) {
-                    if (snap_init.get_csr(csr_id) != snap_final.get_csr(csr_id)) {
+                    if (snap_init.get_csr(csr_id) != snap_final.get_csr(csr_id) &&
+                        !config.ignored_csr.get(csr_id, false)) {
                         // this CSR changed between the initial and final state
                         // store commit that clobbers this CSR
                         clobber.effects ~= InfoNode(InfoType.CSR, csr_id, snap_final.get_csr(
@@ -904,7 +920,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 // if (leaf !in visited)
                 //     unvisited.insertFront(leaf);
                 unvisited.insertFront(leaf);
-                
+
                 // now propagate upward
 
                 long propagation_nodes_walked_acc = 0;
