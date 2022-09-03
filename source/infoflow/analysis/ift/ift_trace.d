@@ -427,7 +427,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     curr_graph_vert = cached_graph_vert;
 
                     mixin(LOG_DEBUG!(
-                        `format("   reused graph node: %s", curr_graph_vert)`));
+                            `format("   reused graph node: %s", curr_graph_vert)`));
 
                     version (analysis_log)
                         graph_nodes_cache_hits_acc++;
@@ -436,7 +436,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     ift_graph.add_node(curr_graph_vert);
 
                     mixin(LOG_DEBUG!(
-                        `format("   added graph node: %s", curr_graph_vert)`));
+                            `format("   added graph node: %s", curr_graph_vert)`));
 
                     version (analysis_log)
                         graph_nodes_cache_misses_acc++;
@@ -444,8 +444,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 // update node flags
                 auto vert_flags = IFTGraphNode.Flags.Propagated;
-                if (curr_node.is_final()) vert_flags |= IFTGraphNode.Flags.Final;
-                if (curr_node.is_deterministic()) vert_flags |= IFTGraphNode.Flags.Deterministic;
+                if (curr_node.is_final())
+                    vert_flags |= IFTGraphNode.Flags.Final;
+                if (curr_node.is_deterministic())
+                    vert_flags |= IFTGraphNode.Flags.Deterministic;
                 curr_graph_vert.flags = vert_flags;
 
                 // connect ourselves to our parent (parent comes in the future, so edge us -> parent)
@@ -483,7 +485,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             Nullable!IFTGraphNode maybe_last_node_vert;
             if (enable_ift_graph) {
                 // add our "last node" to the graph
-                
+
                 IFTGraphNode last_node_vert;
 
                 auto cached_graph_vert = ift_graph.find_in_cache(last_node_last_touch_ix, last_node);
@@ -493,7 +495,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     last_node_vert = new IFTGraphNode(InfoView(last_node, last_node_last_touch_ix));
                     ift_graph.add_node(last_node_vert);
                 }
-
 
                 maybe_last_node_vert = last_node_vert;
             }
@@ -880,9 +881,13 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             // for each leaf node, propagate the flags to nodes they point to
-            import std.algorithm.searching: countUntil;
+            import std.algorithm.searching : countUntil;
 
-            mixin(LOG_INFO!(`format(" propagating %d leaf nodes", propagated_leaf_nodes.data.length)`));
+            mixin(LOG_INFO!(
+                    `format(" propagating %d leaf nodes", propagated_leaf_nodes.data.length)`));
+
+            auto unvisited = DList!IFTGraphNode();
+            bool[IFTGraphNode] visited;
 
             foreach (i, leaf; propagated_leaf_nodes.data) {
                 mixin(LOG_TRACE!(`format(" propagating flags for node: %s", leaf)`));
@@ -891,12 +896,12 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 // // find the leaf in the subtree
                 // auto leaf_in_subtree = subtree_verts.countUntil(leaf);
                 // enforce(subtree_verts[leaf_in_subtree] == leaf, "leaf not found in subtree");
+
+                // if (leaf !in visited)
+                //     unvisited.insertFront(leaf);
+                unvisited.insertFront(leaf);
                 
                 // now propagate upward
-                auto unvisited = DList!IFTGraphNode();
-                bool[IFTGraphNode] visited;
-
-                unvisited.insertFront(leaf);
 
                 long propagation_nodes_walked_acc = 0;
 
@@ -931,7 +936,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         if ((curr.flags & IFTGraphNode.Flags.Final) > 0 &&
                             (leaf.flags & IFTGraphNode.Flags.Final) == 0) {
                             enforce(false, format("contradiction in node flags: %s (%s) is final, but %s (%s) is not",
-                                curr, curr.info_view.node.type, leaf, leaf.info_view.node.type));
+                                    curr, curr.info_view.node.type, leaf, leaf.info_view.node.type));
                         }
 
                         // if this node is deterministic, but the leaf is not, we should update the node to be not deterministic
@@ -972,7 +977,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             foreach (i, final_vert; final_graph_verts) {
                 // analyze the subtree from this vert
                 // mixin(LOG_INFO!(`" analyzing subtrees for vert: %s", final_vert`));
-                mixin(LOG_TRACE!(`" analyzing subtrees for vert (%d/%d): %s", i, num_final_graph_verts, final_vert`));
+                mixin(LOG_TRACE!(
+                        `" analyzing subtrees for vert (%d/%d): %s", i, num_final_graph_verts, final_vert`));
 
                 // auto dep_subtree = find_graph_node_dependency_subtree(final_vert);
 
