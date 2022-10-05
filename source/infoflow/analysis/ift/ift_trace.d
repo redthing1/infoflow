@@ -908,9 +908,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     `format(" propagating %d leaf nodes", propagated_leaf_nodes.data.length)`));
 
             auto unvisited = DList!IFTGraphNode();
-            bool[IFTGraphNode] visited;
+            // bool[IFTGraphNode] visited;
 
             foreach (i, leaf; propagated_leaf_nodes.data) {
+                bool[IFTGraphNode] visited;
                 mixin(LOG_TRACE!(`format(" propagating flags for node: %s", leaf)`));
                 // auto subtree_verts = find_graph_node_dependency_subtree(leaf);
                 // mixin(LOG_INFO!(`format("  found subtree of %d nodes", subtree_verts.length)`));
