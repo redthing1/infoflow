@@ -224,11 +224,8 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                     enum final_color = "#ef9148";
                     enum deterministic_color = "#1ABA8B";
 
-                    auto node_color = default_color;
-
-                    if ((ift_vert.flags & IFTGraphNode.Flags.Deterministic) > 0) {
-                        node_color = deterministic_color;
-                    } else if ((ift_vert.flags & IFTGraphNode.Flags.Final) > 0) {
+                    auto node_color = deterministic_color;
+                    if ((ift_vert.flags & IFTGraphNode.Flags.Nondeterministic) > 0) {
                         node_color = final_color;
                     }
 
@@ -273,8 +270,8 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                 writefln("  cache build time:       %7ss", (
                     cast(double) ift.log_cache_build_time / 1_000_000));
                 writefln("  propagation walked:     %8d", ift.log_propagation_nodes_walked);
-                writefln("  propagation time:       %7ss", (
-                    cast(double) ift.log_propagation_time / 1_000_000));
+                writefln("  propagation time:       %7sms", (
+                    cast(double) ift.log_propagation_time / 1_000));
             }
             writefln("  analysis time:          %7ss", (
                     cast(double) ift.log_analysis_time / 1_000_000));
