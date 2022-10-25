@@ -4,6 +4,7 @@ import std.algorithm.mutation;
 import std.algorithm.iteration : map, filter, fold;
 import std.array: appender, array;
 import std.range;
+import std.exception: enforce;
 
 template InfoLog(TRegWord, TMemWord, TRegSet) {
     import std.traits;
