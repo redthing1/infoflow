@@ -111,7 +111,8 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             if (!tracked_mem.get_page(addr, page, page_base_address)) {
                 import std.format;
                 
-                assert(0, format("failed to find page for address 0x%x (base address 0x%x)", addr, page_base_address));
+                // assert(0, format("failed to find page for address 0x%x (base address 0x%x)", addr, page_base_address));
+                enforce(0, format("failed to find page for address 0x%x (base address 0x%x)", addr, page_base_address));
             }
 
             // get the memory word
