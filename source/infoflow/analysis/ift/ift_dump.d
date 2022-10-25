@@ -273,8 +273,8 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                 writefln("  cache build time:       %7ss", (
                     cast(double) ift.log_cache_build_time / 1_000_000));
                 writefln("  propagation walked:     %8d", ift.log_propagation_nodes_walked);
-                writefln("  propagation time:       %7ss", (
-                    cast(double) ift.log_propagation_time / 1_000_000));
+                writefln("  propagation time:       %7sms", (
+                    cast(double) ift.log_propagation_time / 1_000));
             }
             writefln("  analysis time:          %7ss", (
                     cast(double) ift.log_analysis_time / 1_000_000));
