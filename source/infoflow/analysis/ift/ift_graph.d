@@ -17,7 +17,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
     alias TInfoLog = InfoLog!(TRegWord, TMemWord, TRegSet);
     mixin(TInfoLog.GenAliases!("TInfoLog"));
 
-    enum IFTGraphNodeMemSize = __traits(classInstanceSize, IFTGraphNode);
+    // enum IFTGraphNodeMemSize = __traits(classInstanceSize, IFTGraphNode);
 
     final class IFTGraph {
         /// graph vertices/nodes
@@ -38,16 +38,17 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
         private GraphEdges[IFTGraphNode] _node_neighbors_to_cache;
 
         pragma(inline, true) {
-            private IFTGraphNode _find_cached(ulong commit_id, InfoNode node) {
+            private Nullable!IFTGraphNode _find_cached(ulong commit_id, InfoNode node) {
                 if (commit_id in _nodes_by_commit_cache) {
                     if (node in _nodes_by_commit_cache[commit_id]) {
                         // cache hit
-                        return _nodes_by_commit_cache[commit_id][node];
+                        // return _nodes_by_commit_cache[commit_id][node];
+                        return some(_nodes_by_commit_cache[commit_id][node]);
                     }
                 }
 
                 // cache miss
-                return null;
+                return no!IFTGraphNode;
             }
 
             private void _store_vert_cache(ulong commit_id, InfoNode node, IFTGraphNode vert) {
@@ -66,7 +67,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
 
         void add_node(IFTGraphNode node) {
             // ensure no duplicate exists
-            enforce(!_find_cached(node.info_view.commit_id, node.info_view.node),
+            enforce(!_find_cached(node.info_view.commit_id, node.info_view.node).has,
                 format("attempt to add duplicate node: %s", node));
 
             nodes ~= node;
@@ -75,14 +76,16 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             _store_vert_cache(node.info_view.commit_id, node.info_view.node, node);
         }
 
-        IFTGraphNode find_in_cache(ulong commit_id, InfoNode node) {
+        Nullable!IFTGraphNode find_in_cache(ulong commit_id, InfoNode node) {
             return _find_cached(commit_id, node);
         }
 
-        IFTGraphNode find_node(ulong commit_id, InfoNode node) {
+        Nullable!IFTGraphNode find_node(ulong commit_id, InfoNode node) {
             // see if we can find it in the cache
-            IFTGraphNode cached = _find_cached(commit_id, node);
-            if (cached !is null)
+            auto cached = _find_cached(commit_id, node);
+            // if (cached !is null)
+            //     return cached;
+            if (cached.has)
                 return cached;
 
             // find with linear search
@@ -90,12 +93,13 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
                 if (nodes[i].info_view.commit_id == commit_id && nodes[i].info_view.node == node) {
                     // cache it
                     _store_vert_cache(commit_id, node, nodes[i]);
-                    return nodes[i];
+                    // return nodes[i];
+                    return some(nodes[i]);
                 }
             }
 
             // not found
-            return null;
+            return no!IFTGraphNode;
         }
 
         IFTGraphNode get_node_ix(ulong index) {
@@ -357,7 +361,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
         }
     }
 
-    final class IFTGraphNode {
+    struct IFTGraphNode { 
         /// the information as it existed in a point in time
         InfoView info_view;
         Flags flags = Flags.None;
@@ -379,7 +383,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             Reserved7 = 1 << 8,
         }
 
-        override string toString() const {
+        string toString() const {
             import std.string : format;
             import std.conv : to;
             import std.array : appender, array;
