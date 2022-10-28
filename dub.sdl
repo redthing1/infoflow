@@ -21,3 +21,8 @@ configuration "unittest" {
 	sourcePaths "test"
 	importPaths "test"
 }
+configuration "ddox" {
+	targetType "library"
+
+	x:ddoxFilterArgs "--min-protection=Protected"
+}
