@@ -41,11 +41,11 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
         void optimize() {
             MonoTime tmr_start = MonoTime.currTime;
 
-            build_caches();
+            // build_caches();
 
-            if (enable_prune_deterministic_subtrees) {
-                prune_deterministic_subtrees();
-            }
+            // if (enable_prune_deterministic_subtrees) {
+            //     prune_deterministic_subtrees();
+            // }
 
             MonoTime tmr_end = MonoTime.currTime;
             auto elapsed = tmr_end - tmr_start;

@@ -4,6 +4,7 @@ import std.algorithm.mutation;
 import std.algorithm.iteration : map, filter, fold;
 import std.array: appender, array;
 import std.range;
+import std.exception: enforce;
 
 template InfoLog(TRegWord, TMemWord, TRegSet) {
     import std.traits;
@@ -74,8 +75,8 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
 
             auto base_address = address & ~(PAGE_SIZE - 1);
             // assert(base_address == address, "page base address must be aligned");
-            assert(base_address == address, format("page base address must be aligned: %08x", address));
-            assert(base_address !in pages, "page at address already exists");
+            enforce(base_address == address, format("page base address must be aligned: %08x", address));
+            enforce(base_address !in pages, "page at address already exists");
 
             // make new page
             Page page;
@@ -111,7 +112,8 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             if (!tracked_mem.get_page(addr, page, page_base_address)) {
                 import std.format;
                 
-                assert(0, format("failed to find page for address 0x%x (base address 0x%x)", addr, page_base_address));
+                // assert(0, format("failed to find page for address 0x%x (base address 0x%x)", addr, page_base_address));
+                enforce(0, format("failed to find page for address 0x%x (base address 0x%x)", addr, page_base_address));
             }
 
             // get the memory word
@@ -131,6 +133,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
             // ??
             import std.format : format;
 
+            enforce(0, format("no memory map entry found for address: %s", addr));
             assert(0, format("no memory map entry found for address: %s", addr));
             // return MemoryMap.Type.Unknown;
         }
