@@ -1,0 +1,10 @@
+name "binned1"
+description "test"
+authors "no"
+copyright "Copyright © 2022, no"
+license "proprietary"
+dependency "d_tree_sitter" version="~>1.2.0"
+
+preBuildCommands "cd lang && make"
+
+lflags "./lang/d_lang.so" "./lang/cpp_lang.so" "./lang/c_lang.so"

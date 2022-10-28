@@ -1,0 +1,15 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/binned1
+binned1.so
+binned1.dylib
+binned1.dll
+binned1.a
+binned1.lib
+binned1-test-*
+*.exe
+*.o
+*.obj
+*.lst
