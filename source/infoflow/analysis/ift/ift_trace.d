@@ -991,9 +991,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             auto tmr_start = MonoTime.currTime;
 
             // rebuild caches for the graph
+            ift_graph.invalidate_caches();
             mixin(LOG_INFO!(`format(
                 "rebuilding graph caches (%d nodes, %d edges)", ift_graph.nodes.length, ift_graph.edges.length)`));
-            ift_graph.rebuild_neighbors_cache();
+            ift_graph.rebuild_caches();
             mixin(LOG_INFO!(`" done building graph caches"`));
 
             auto elapsed = MonoTime.currTime - tmr_start;

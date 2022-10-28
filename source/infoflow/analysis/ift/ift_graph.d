@@ -26,9 +26,16 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
         /// graph edges
         IFTGraphEdge[] edges;
 
+        /// graph caches
         /// cache by commit id
         alias NodeCacheSet = IFTGraphNode[InfoNode];
         NodeCacheSet[ulong] _nodes_by_commit_cache;
+        alias GraphEdges = IFTGraphEdge[];
+        private bool[IFTGraphEdge] _edge_cache;
+        /// neighbors that have edges going from this node
+        private GraphEdges[IFTGraphNode] _node_neighbors_from_cache;
+        /// neighbors that have edges coming to this node
+        private GraphEdges[IFTGraphNode] _node_neighbors_to_cache;
 
         pragma(inline, true) {
             private IFTGraphNode _find_cached(ulong commit_id, InfoNode node) {
@@ -94,13 +101,6 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
         IFTGraphNode get_node_ix(ulong index) {
             return nodes[index];
         }
-
-        alias GraphEdges = IFTGraphEdge[];
-        private bool[IFTGraphEdge] _edge_cache;
-        /// neighbors that have edges going from this node
-        private GraphEdges[IFTGraphNode] _node_neighbors_from_cache;
-        /// neighbors that have edges coming to this node
-        private GraphEdges[IFTGraphNode] _node_neighbors_to_cache;
 
         pragma(inline, true) {
             private void _store_edge_cache(IFTGraphEdge edge) {
@@ -300,7 +300,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             return true;
         }
 
-        void rebuild_neighbors_cache() {
+        private void rebuild_neighbors_cache() {
             import std.parallelism : parallel;
 
             // for each node, build a list of neighbors, pointing to and from
@@ -321,6 +321,17 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             }
 
             _rehash_neighbors_cache();            
+        }
+
+        void invalidate_caches() {
+            _nodes_by_commit_cache.clear();
+            _edge_cache.clear();
+            _node_neighbors_to_cache.clear();
+            _node_neighbors_from_cache.clear();
+        }
+
+        void rebuild_caches() {
+            rebuild_neighbors_cache();
         }
 
         @property size_t num_verts() {
