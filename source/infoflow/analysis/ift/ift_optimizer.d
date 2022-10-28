@@ -60,110 +60,110 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
             writefln("  prune nodes walked:     %8s", log_prune_nodes_walked);
         }
 
-        // void build_caches() {
+        void build_caches() {
 
-        // }
+        }
 
-        // void prune_deterministic_subtrees() {
-        //     // any subtrees that are fully deterministic can just be pruned to just a single node (the root)
-        //     // an easy way to do this is to DFS from our final verts, and when we step back to something deterministic
-        //     // we can prune the subtree and continue
+        void prune_deterministic_subtrees() {
+            // any subtrees that are fully deterministic can just be pruned to just a single node (the root)
+            // an easy way to do this is to DFS from our final verts, and when we step back to something deterministic
+            // we can prune the subtree and continue
 
-        //     mixin(LOG_INFO!(`format("pruning deterministic subtrees")`));
-        //     mixin(LOG_INFO!(`format(" identifying deterministic subtrees")`));
+            mixin(LOG_INFO!(`format("pruning deterministic subtrees")`));
+            mixin(LOG_INFO!(`format(" identifying deterministic subtrees")`));
 
-        //     auto deterministic_subtree_tops = appender!(IFTGraphNode[]);
+            auto deterministic_subtree_tops = appender!(IFTGraphNode[]);
 
-        //     {
-        //         auto unvisited = DList!IFTGraphNode();
-        //         bool[IFTGraphNode] visited;
+            {
+                auto unvisited = DList!IFTGraphNode();
+                bool[IFTGraphNode] visited;
 
-        //         foreach (final_vert; ift.final_graph_verts) {
-        //             unvisited.insertFront(final_vert);
+                foreach (final_vert; ift.final_graph_verts) {
+                    unvisited.insertFront(final_vert);
 
-        //             mixin(LOG_TRACE!(` format(" starting prune from final vert %s", final_vert)`));
+                    mixin(LOG_TRACE!(` format(" starting prune from final vert %s", final_vert)`));
 
-        //             while (!unvisited.empty) {
-        //                 auto curr = unvisited.front;
-        //                 unvisited.removeFront();
-        //                 visited[curr] = true;
+                    while (!unvisited.empty) {
+                        auto curr = unvisited.front;
+                        unvisited.removeFront();
+                        visited[curr] = true;
 
-        //                 mixin(LOG_DEBUG!(` format("  visiting %s", curr)`));
-        //                 log_prune_nodes_walked++;
+                        mixin(LOG_DEBUG!(` format("  visiting %s", curr)`));
+                        log_prune_nodes_walked++;
 
-        //                 if ((curr.flags & IFTGraphNode.Flags.Deterministic) > 0) {
-        //                     // add the subtree root to the list of deterministic subtrees
-        //                     deterministic_subtree_tops ~= curr;
+                        if ((curr.flags & IFTGraphNode.Flags.Nondeterministic) > 0) {
+                            // add the subtree root to the list of deterministic subtrees
+                            deterministic_subtree_tops ~= curr;
 
-        //                     // go no further in this subtree
-        //                     continue;
-        //                 }
+                            // go no further in this subtree
+                            continue;
+                        }
 
-        //                 // queue neighbors (nodes that point to this one
-        //                 auto targets = ift.ift_graph.get_edges_to(curr);
-        //                 foreach (k, target_edge; targets) {
-        //                     auto target_node = target_edge.src;
-        //                     if (!visited.get(target_node, false)) {
-        //                         mixin(LOG_DEBUG!(`format("   queuing node: %s", target_node)`));
-        //                         unvisited.insertFront(target_node);
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     }
+                        // queue neighbors (nodes that point to this one
+                        auto targets = ift.ift_graph.get_edges_to(curr);
+                        foreach (k, target_edge; targets) {
+                            auto target_node = target_edge.src;
+                            if (!visited.get(target_node, false)) {
+                                mixin(LOG_DEBUG!(`format("   queuing node: %s", target_node)`));
+                                unvisited.insertFront(target_node);
+                            }
+                        }
+                    }
+                }
+            }
 
-        //     mixin(LOG_INFO!(`format(" pruning identified subtrees")`));
+            mixin(LOG_INFO!(`format(" pruning identified subtrees")`));
 
-        //     // prune all the deterministic subtrees
-        //     {
-        //         auto unvisited = DList!IFTGraphNode();
-        //         bool[IFTGraphNode] visited;
-        //         bool[IFTGraphNode] keep_nodes;
+            // prune all the deterministic subtrees
+            {
+                auto unvisited = DList!IFTGraphNode();
+                bool[IFTGraphNode] visited;
+                bool[IFTGraphNode] keep_nodes;
 
-        //         foreach (i, det_node; deterministic_subtree_tops) {
-        //             keep_nodes[det_node] = true;
-        //             unvisited.insertFront(det_node);
-        //         }
+                foreach (i, det_node; deterministic_subtree_tops) {
+                    keep_nodes[det_node] = true;
+                    unvisited.insertFront(det_node);
+                }
 
-        //         // do traversal and delete everything that isn't in the keep_nodes list
-        //         while (!unvisited.empty) {
-        //             auto curr = unvisited.front;
-        //             unvisited.removeFront();
-        //             visited[curr] = true;
+                // do traversal and delete everything that isn't in the keep_nodes list
+                while (!unvisited.empty) {
+                    auto curr = unvisited.front;
+                    unvisited.removeFront();
+                    visited[curr] = true;
 
-        //             mixin(LOG_DEBUG!(`format("    visiting %s to delete from graph", curr)`));
+                    mixin(LOG_DEBUG!(`format("    visiting %s to delete from graph", curr)`));
 
-        //             log_pruned_nodes++;
-        //             log_prune_nodes_walked++;
+                    log_pruned_nodes++;
+                    log_prune_nodes_walked++;
 
-        //             if (curr in keep_nodes) {
-        //                 // curr node is the root node of the subtree, so just remove all edges touching it
-        //                 ift.ift_graph.delete_edges_touching(curr);
-        //                 mixin(LOG_DEBUG!(`format("     removed edges touching root node")`));
-        //             } else {
-        //                 // delete this node
-        //                 mixin(LOG_DEBUG!(`format("     deleting node from graph: %s", curr)`));
+                    if (curr in keep_nodes) {
+                        // curr node is the root node of the subtree, so just remove all edges touching it
+                        ift.ift_graph.delete_edges_touching(curr);
+                        mixin(LOG_DEBUG!(`format("     removed edges touching root node")`));
+                    } else {
+                        // delete this node
+                        mixin(LOG_DEBUG!(`format("     deleting node from graph: %s", curr)`));
 
-        //                 // delete this node from the graph
-        //                 auto remove_result = ift.ift_graph.remove_node(curr);
-        //                 if (remove_result) {
-        //                     mixin(LOG_DEBUG!(`format("     removed node %s", curr)`));
-        //                 }
-        //                 // enforce(remove_result, "failed to remove node from graph");
-        //             }
+                        // delete this node from the graph
+                        auto remove_result = ift.ift_graph.remove_node(curr);
+                        if (remove_result) {
+                            mixin(LOG_DEBUG!(`format("     removed node %s", curr)`));
+                        }
+                        // enforce(remove_result, "failed to remove node from graph");
+                    }
 
-        //             // queue neighbors (nodes that point to this one
-        //             auto targets = ift.ift_graph.get_edges_to(curr);
-        //             foreach (k, target_edge; targets) {
-        //                 auto target_node = target_edge.src;
-        //                 if (!visited.get(target_node, false)) {
-        //                     mixin(LOG_DEBUG!(
-        //                             `format("     queuing node for prune: %s", target_node)`));
-        //                     unvisited.insertFront(target_node);
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
+                    // queue neighbors (nodes that point to this one
+                    auto targets = ift.ift_graph.get_edges_to(curr);
+                    foreach (k, target_edge; targets) {
+                        auto target_node = target_edge.src;
+                        if (!visited.get(target_node, false)) {
+                            mixin(LOG_DEBUG!(
+                                    `format("     queuing node for prune: %s", target_node)`));
+                            unvisited.insertFront(target_node);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

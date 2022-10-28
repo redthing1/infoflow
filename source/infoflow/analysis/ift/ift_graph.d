@@ -369,7 +369,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
         enum Flags {
             None = 0x0,
             Final = 1 << 0,
-            Deterministic = 1 << 1,
+            Nondeterministic = 1 << 1,
             Inner = 1 << 2,
             Propagated = 1 << 3,
             Reserved3 = 1 << 4,

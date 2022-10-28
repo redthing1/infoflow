@@ -224,8 +224,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
 
         ///  whether this is a deterministic source (will always have the same value)
         bool is_deterministic() const {
-            return type == InfoType.Immediate
-                || (type & InfoType.DeterminateValue) != 0;
+            return type == InfoType.Immediate;
         }
     }
 
