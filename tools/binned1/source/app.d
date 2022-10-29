@@ -3,6 +3,7 @@ import std.file;
 import std.path;
 import std.array;
 import std.algorithm.comparison;
+import std.typecons;
 import tsparse;
 
 import lang;
@@ -143,9 +144,10 @@ void main(string[] args) {
 			}
 			auto first_result = finder.results[query][0];
 			writefln("creating translation for result: [%s], %s ...", first_result.node.kind, parsed_module
-					.source[first_result.node.start_byte .. first_result.node.end_byte][0 .. min(20, first_result.node
+					.source[first_result.node.start_byte .. first_result.node.end_byte][0 .. min(20, first_result
+							.node
 							.end_byte - first_result.node.start_byte)]);
-			
+
 			// now create a translation result
 			auto translation_result = translate_node(parsed_module, first_result);
 			writefln("translation result: %s", translation_result);
@@ -157,8 +159,42 @@ void main(string[] args) {
 }
 
 TranslationResult translate_node(ParsedModule pm, FinderVisitor.Result result) {
-	// just print the node
-	writefln(" > translator input: [%s], %s ...", result.node.kind, pm.source[result.node.start_byte .. result.node.end_byte][0 .. min(20, result.node.end_byte - result.node.start_byte)]);
+	import d_tree_sitter;
 
-	return TranslationResult();
+	// just print the node
+	writefln(" > translator input: [%s], %s ...", result.node.kind, pm
+			.source[result.node.start_byte .. result.node.end_byte][0 .. min(20, result.node.end_byte - result
+					.node.start_byte)]);
+
+	auto outsrc = appender!string();
+	auto root = result.node;
+	// auto cur = root.walk();
+
+	Nullable!Node kind_child_i(string kind, int ix) {
+		auto seen = 0;
+		for (auto i = 0; i < root.child_count; i++) {
+			auto maybe_child = root.child(i);
+			auto child = maybe_child.get;
+			if (child.kind == kind) {
+				if (seen == ix) {
+					// return child;
+					return Nullable!Node(child);
+				}
+				seen++;
+			}
+		}
+		return Nullable!Node.init;
+	}
+
+	auto node_str(Node node) {
+		return pm.source[node.start_byte .. node.end_byte];
+	}
+
+	// add the type declaration
+	outsrc ~= node_str(kind_child_i("struct", 0).get);
+	outsrc ~= " ";
+	outsrc ~= node_str(kind_child_i("identifier", 0).get);
+	outsrc ~= " {";
+
+	return TranslationResult(outsrc.data);
 }
