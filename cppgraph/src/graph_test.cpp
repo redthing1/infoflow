@@ -19,7 +19,8 @@ GenericIFTCompactGraph ift_cppgraph_test_1(const GenericIFTCompactGraph input_gr
   // list the nodes
   std::cout << "nodes: " << std::endl;
   for (uint64_t i = 0; i < graph.num_nodes; i++) {
-    std::cout << "  " << graph.nodes[i].info_view.node.to_string() << std::endl;
+    // std::cout << "  " << graph.nodes[i].info_view.to_string() << std::endl;
+    std::cout << " #" << i << ": " << graph.nodes[i].info_view.node.to_string() << std::endl;
   }
 
   return graph;
