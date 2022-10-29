@@ -1,6 +1,10 @@
 #pragma once
 
 #include <stdint.h>
+#include <string>
+#include <sstream>
+#include <ios>
+#include <iomanip>
 
 // #define TRegWord uint64_t
 
@@ -77,11 +81,32 @@ public:
     InfoType type;
     TRegWord data;
     TRegWord value;
+
+    public:
+      std::string to_string() const {
+        std::stringstream ss;
+        ss << "InfoNode(";
+        ss << "type=" << type << ", ";
+        ss << "data=" << "0x" << std::hex << std::setfill('0') << std::setw(16) << data << ", ";
+        ss << "value=" << "0x" << std::hex << std::setfill('0') << std::setw(16) << value;
+        ss << ")";
+        return ss.str();
+      }
   };
 
   struct InfoView {
     InfoNode node;
     long commit_id;
+
+    public:
+      std::string to_string() const {
+        std::stringstream ss;
+        ss << "InfoView(";
+        ss << "node=" << node.to_string() << ", ";
+        ss << "commit_id=" << commit_id;
+        ss << ")";
+        return ss.str();
+      }
   };
 };
 

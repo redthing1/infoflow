@@ -13,6 +13,15 @@ GenericIFTCompactGraph ift_cppgraph_test_1(const GenericIFTCompactGraph input_gr
   std::cout << "  nodes: " << graph.num_nodes << std::endl;
   std::cout << "  edges: " << graph.num_edges << std::endl;
 
+  // // inspect the first node
+  // std::cout << "first node: " << graph.nodes[0].info_view.node.to_string() << std::endl;
+  
+  // list the nodes
+  std::cout << "nodes: " << std::endl;
+  for (uint64_t i = 0; i < graph.num_nodes; i++) {
+    std::cout << "  " << graph.nodes[i].info_view.node.to_string() << std::endl;
+  }
+
   return graph;
 }
 
