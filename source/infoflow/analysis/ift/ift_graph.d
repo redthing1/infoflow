@@ -347,7 +347,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             return edges.length;
         }
 
-        struct CompactGraph {
+        extern(C) struct CompactGraph {
             /// graph vertices/nodes
             IFTGraphNode[] nodes;
 
