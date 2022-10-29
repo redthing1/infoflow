@@ -86,6 +86,10 @@ void main(string[] args) {
 		return;
 	}
 
+	import core.memory;
+
+	GC.disable(); // disgusting hack
+
 	// extract the things i want
 	auto queries = [
 		FinderVisitor.Query("struct_declaration", "struct InfoView"),
