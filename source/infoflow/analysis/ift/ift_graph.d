@@ -13,11 +13,11 @@ import std.exception : enforce;
 
 import infoflow.models;
 
-extern (C++) int cpp_add(int a, int b);
+// extern (C++) int cpp_add(int a, int b);
 
-unittest {
-    assert(cpp_add(1, 2) == 3);
-}
+// unittest {
+//     assert(cpp_add(1, 2) == 3);
+// }
 
 // extern graph code
 enum GenericRegSet {
@@ -26,9 +26,11 @@ enum GenericRegSet {
 alias GenericIFTCompactGraph = IFTAnalysisGraph!(ulong, byte, GenericRegSet).IFTGraph.CompactGraph;
 extern (C++) GenericIFTCompactGraph ift_cppgraph_test_1(const GenericIFTCompactGraph input_graph);
 
-unittest {
-    auto f = ift_cppgraph_test_1(GenericIFTCompactGraph.init);
-}
+// unittest {
+//     auto in_test = GenericIFTCompactGraph.init;
+//     auto out_test = ift_cppgraph_test_1(in_test);
+//     assert(in_test == out_test, "input graph should be equal to output graph");
+// }
 
 template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
     alias TInfoLog = InfoLog!(TRegWord, TMemWord, TRegSet);
