@@ -7,10 +7,10 @@ targetType "library"
 
 dependency "d-graphviz" version="~>0.0.3"
 
-// preBuildCommands "cd cppgraph && make -j"
-preGenerateCommands "cd cppgraph && make -j"
+preBuildCommands "cd cppgraph && make -j"
 lflags "-L$PACKAGE_DIR/cppgraph" "-l:infoflow_cppgraph.a"
 libs "stdc++"
+extraDependencyFiles "cppgraph/src/*" "cppgraph/include/*"
 
 configuration "default" {
 	targetType "library"
