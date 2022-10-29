@@ -26,6 +26,10 @@ enum GenericRegSet {
 alias GenericIFTCompactGraph = IFTAnalysisGraph!(ulong, byte, GenericRegSet).IFTGraph.CompactGraph;
 extern (C++) GenericIFTCompactGraph ift_cppgraph_test_1(const GenericIFTCompactGraph input_graph);
 
+unittest {
+    auto f = ift_cppgraph_test_1(GenericIFTCompactGraph.init);
+}
+
 template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
     alias TInfoLog = InfoLog!(TRegWord, TMemWord, TRegSet);
     mixin(TInfoLog.GenAliases!("TInfoLog"));

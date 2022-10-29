@@ -97,7 +97,7 @@ public:
     IFTGraphNode dst;
   };
 
-  struct IFTCompactGraph {
+  struct CompactGraph {
     uint64_t num_nodes;
     IFTGraphNode *nodes;
     uint64_t num_edges;
@@ -110,5 +110,7 @@ enum GenericRegSet {
 };
 
 // alias it to a shorter name
+// using GenericIFTCompactGraph =
+//     IFTAnalysisGraph<uint64_t, int8_t, GenericRegSet>::IFTCompactGraph;
 using GenericIFTCompactGraph =
-    IFTAnalysisGraph<uint64_t, int8_t, GenericRegSet>::IFTCompactGraph;
+    IFTAnalysisGraph<unsigned long, signed char, GenericRegSet>::CompactGraph;
