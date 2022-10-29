@@ -3,7 +3,7 @@ description "test"
 authors "no"
 copyright "Copyright © 2022, no"
 license "proprietary"
-dependency "d_tree_sitter" version="~>1.2.0"
+dependency "d_tree_sitter" version="~>1.2.1"
 
 preBuildCommands "cd lang && make"
 
