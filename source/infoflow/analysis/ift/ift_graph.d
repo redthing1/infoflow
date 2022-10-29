@@ -24,7 +24,10 @@ enum GenericRegSet {
     GENERIC_UNKNOWN,
 }
 alias GenericIFTCompactGraph = IFTAnalysisGraph!(ulong, byte, GenericRegSet).IFTGraph.CompactGraph;
-extern (C++) GenericIFTCompactGraph ift_cppgraph_test_1(const GenericIFTCompactGraph input_graph);
+
+extern (C++) {
+    GenericIFTCompactGraph ift_cppgraph_test_1(const GenericIFTCompactGraph input_graph);
+}
 
 // unittest {
 //     auto in_test = GenericIFTCompactGraph.init;
