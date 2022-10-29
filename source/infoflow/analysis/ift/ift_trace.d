@@ -119,6 +119,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
             if (enable_ift_graph) {
                 if (enable_ift_graph_analysis) {
+                    mixin(LOG_INFO!(`"calling cppgraph test 1"`));
+                    TIFTAnalysisGraph.ift_cppgraph_test_1(ift_graph.export_compact());
                     rebuild_graph_caches();
                     propagate_node_flags();
                 }

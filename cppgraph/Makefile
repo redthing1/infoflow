@@ -6,7 +6,7 @@ BUILD_PATH = build
 BIN_PATH = $(BUILD_PATH)/bin
 
 # executable # 
-BIN_NAME = runner
+BIN_NAME = infoflow_cppgraph.a
 
 # extensions #
 SRC_EXT = cpp
@@ -59,7 +59,9 @@ all: $(BIN_PATH)/$(BIN_NAME)
 # Creation of the executable
 $(BIN_PATH)/$(BIN_NAME): $(OBJECTS)
 	@echo "Linking: $@"
-	$(CXX) $(OBJECTS) -o $@ ${LIBS}
+#	$(CXX) $(OBJECTS) -o $@ ${LIBS}
+# build instead a static library
+	$(AR) rcs $@ $(OBJECTS)
 
 # Add dependency files, if they exist
 -include $(DEPS)

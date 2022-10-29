@@ -19,6 +19,9 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
 
     // enum IFTGraphNodeMemSize = __traits(classInstanceSize, IFTGraphNode);
 
+    alias IFTCompactGraph = IFTGraph.CompactGraph;
+    extern(C++) IFTCompactGraph ift_cppgraph_test_1(const IFTCompactGraph input_graph);
+
     final class IFTGraph {
         /// graph vertices/nodes
         IFTGraphNode[] nodes;
@@ -347,21 +350,25 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             return edges.length;
         }
 
-        extern(C) struct CompactGraph {
-            /// graph vertices/nodes
-            IFTGraphNode[] nodes;
-
-            /// graph edges
-            IFTGraphEdge[] edges;
+        extern (C++) struct CompactGraph {
+            ulong num_nodes;
+            IFTGraphNode* nodes;
+            ulong num_edges;
+            IFTGraphEdge* edges;
         }
 
         CompactGraph export_compact() {
-            return CompactGraph(nodes, edges);
+            return CompactGraph(
+                num_verts,
+                nodes.ptr,
+                num_edges,
+                edges.ptr
+            );
         }
 
         void import_compact(CompactGraph graph) {
-            this.nodes = graph.nodes;
-            this.edges = graph.edges;
+            this.nodes = graph.nodes[0 .. graph.num_nodes];
+            this.edges = graph.edges[0 .. graph.num_edges];
 
             invalidate_caches();
         }

@@ -7,6 +7,9 @@ targetType "library"
 
 dependency "d-graphviz" version="~>0.0.3"
 
+preBuildCommands "cd cppgraph && make -j"
+lflags "-Lcppgraph/infoflow_cppgraph.a"
+
 configuration "default" {
 	targetType "library"
 	versions "default"

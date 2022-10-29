@@ -60,3 +60,10 @@ struct IFTGraphEdge {
   IFTGraphNode src;
   IFTGraphNode dst;
 };
+
+struct IFTCompactGraph {
+  uint64_t num_nodes;
+  IFTGraphNode *nodes;
+  uint64_t num_edges;
+  IFTGraphEdge *edges;
+};
