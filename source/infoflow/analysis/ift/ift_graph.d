@@ -67,8 +67,9 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
 
         void add_node(IFTGraphNode node) {
             // ensure no duplicate exists
-            enforce(!_find_cached(node.info_view.commit_id, node.info_view.node).has,
-                format("attempt to add duplicate node: %s", node));
+            enforce(!_find_cached(node.info_view.commit_id, node.info_view.node)
+                    .has,
+                    format("attempt to add duplicate node: %s", node));
 
             nodes ~= node;
             // cache it
@@ -324,7 +325,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
                 }
             }
 
-            _rehash_neighbors_cache();            
+            _rehash_neighbors_cache();
         }
 
         void invalidate_caches() {
@@ -345,6 +346,25 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
         @property size_t num_edges() {
             return edges.length;
         }
+
+        struct CompactGraph {
+            /// graph vertices/nodes
+            IFTGraphNode[] nodes;
+
+            /// graph edges
+            IFTGraphEdge[] edges;
+        }
+
+        CompactGraph export_compact() {
+            return CompactGraph(nodes, edges);
+        }
+
+        void import_compact(CompactGraph graph) {
+            this.nodes = graph.nodes;
+            this.edges = graph.edges;
+
+            invalidate_caches();
+        }
     }
 
     struct IFTGraphEdge {
@@ -361,7 +381,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
         }
     }
 
-    struct IFTGraphNode { 
+    struct IFTGraphNode {
         /// the information as it existed in a point in time
         InfoView info_view;
         Flags flags = Flags.None;
