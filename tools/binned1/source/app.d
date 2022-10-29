@@ -97,10 +97,11 @@ void main(string[] args) {
 
 	// extract the things i want
 	auto queries = [
-		FinderVisitor.Query("struct_declaration", "struct InfoView"),
+		// FinderVisitor.Query("enum_declaration", "enum InfoType"),
 		FinderVisitor.Query("struct_declaration", "struct InfoNode"),
-		FinderVisitor.Query("struct_declaration", "struct IFTGraphEdge"),
+		FinderVisitor.Query("struct_declaration", "struct InfoView"),
 		FinderVisitor.Query("struct_declaration", "struct IFTGraphNode"),
+		FinderVisitor.Query("struct_declaration", "struct IFTGraphEdge"),
 	];
 
 	ParsedModule[] modules;
@@ -161,6 +162,13 @@ void main(string[] args) {
 			output_translations[query] = translation_result;
 		}
 
+		// print the output
+		foreach (query; queries) {
+			if (query !in output_translations) {
+				continue;
+			}
+			writefln("%s\n\n", output_translations[query].source);
+		}
 	}
 }
 
