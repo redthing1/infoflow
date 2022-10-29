@@ -4,6 +4,7 @@ import std.path;
 import std.array;
 import std.algorithm.comparison;
 import std.typecons;
+import std.format;
 import tsparse;
 
 import lang;
@@ -95,6 +96,8 @@ void main(string[] args) {
 	auto queries = [
 		FinderVisitor.Query("struct_declaration", "struct InfoView"),
 		FinderVisitor.Query("struct_declaration", "struct InfoNode"),
+		FinderVisitor.Query("struct_declaration", "struct IFTGraphEdge"),
+		FinderVisitor.Query("struct_declaration", "struct IFTGraphNode"),
 	];
 
 	ParsedModule[] modules;
@@ -186,6 +189,40 @@ TranslationResult translate_node(ParsedModule pm, FinderVisitor.Result result) {
 		return Nullable!Node.init;
 	}
 
+	Node[] get_kind_childs_deep(string kind) {
+		Node[] childs;
+		auto cur = root.walk();
+		
+		auto reached_end = false;
+		while (!reached_end) {
+			// visit the current node
+			if (cur.node.kind == kind) {
+				childs ~= cur.node;
+			}
+
+			if (cur.goto_first_child()) {
+				continue;
+			}
+			if (cur.goto_next_sibling()) {
+				continue;
+			}
+
+			auto retracing = true;
+			while (retracing) {
+				if (!cur.goto_parent()) {
+					retracing = false;
+					reached_end = true;
+				} else {
+					if (cur.goto_next_sibling()) {
+						retracing = false;
+					}
+				}
+			}
+		}
+
+		return childs;
+	}
+
 	auto node_str(Node node) {
 		return pm.source[node.start_byte .. node.end_byte];
 	}
@@ -195,6 +232,16 @@ TranslationResult translate_node(ParsedModule pm, FinderVisitor.Result result) {
 	outsrc ~= " ";
 	outsrc ~= node_str(kind_child_i("identifier", 0).get);
 	outsrc ~= " {";
+
+	// add the fields
+	outsrc ~= "\n";
+	auto field_decls = get_kind_childs_deep("var_declarations");
+	foreach (field_decl; field_decls) {
+		outsrc ~= format("  %s\n", node_str(field_decl));
+	}
+
+	// close the struct
+	outsrc ~= "};";
 
 	return TranslationResult(outsrc.data);
 }
