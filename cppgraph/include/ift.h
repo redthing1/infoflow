@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#define TRegWord uint64_t
+// #define TRegWord uint64_t
 
 enum InfoType {
   InfoType_Unknown = 0x0,
@@ -27,16 +27,16 @@ enum InfoType {
   InfoType_Reserved4,
 };
 
-struct InfoNode {
-  InfoType type;
-  TRegWord data;
-  TRegWord value;
-};
+// struct InfoNode {
+//   InfoType type;
+//   TRegWord data;
+//   TRegWord value;
+// };
 
-struct InfoView {
-  InfoNode node;
-  long commit_id;
-};
+// struct InfoView {
+//   InfoNode node;
+//   long commit_id;
+// };
 
 enum IFTGraphNodeFlags {
   IFTGraphNodeFlags_None = 0x0,
@@ -51,19 +51,64 @@ enum IFTGraphNodeFlags {
   IFTGraphNodeFlags_Reserved7 = 1 << 8,
 };
 
-struct IFTGraphNode {
-  InfoView info_view;
-  IFTGraphNodeFlags flags = IFTGraphNodeFlags::IFTGraphNodeFlags_None;
+// struct IFTGraphNode {
+//   InfoView info_view;
+//   IFTGraphNodeFlags flags = IFTGraphNodeFlags::IFTGraphNodeFlags_None;
+// };
+
+// struct IFTGraphEdge {
+//   IFTGraphNode src;
+//   IFTGraphNode dst;
+// };
+
+// struct IFTCompactGraph {
+//   uint64_t num_nodes;
+//   IFTGraphNode *nodes;
+//   uint64_t num_edges;
+//   IFTGraphEdge *edges;
+// };
+
+#define IFT_TEMPLATE                                                           \
+  template <typename TRegWord, typename TMemWord, typename TRegSet>
+
+IFT_TEMPLATE class InfoLog {
+public:
+  struct InfoNode {
+    InfoType type;
+    TRegWord data;
+    TRegWord value;
+  };
+
+  struct InfoView {
+    InfoNode node;
+    long commit_id;
+  };
 };
 
-struct IFTGraphEdge {
-  IFTGraphNode src;
-  IFTGraphNode dst;
+IFT_TEMPLATE class IFTAnalysisGraph {
+public:
+  struct IFTGraphNode {
+    typename InfoLog<TRegWord, TMemWord, TRegSet>::InfoView info_view;
+    IFTGraphNodeFlags flags = IFTGraphNodeFlags::IFTGraphNodeFlags_None;
+  };
+
+  struct IFTGraphEdge {
+    IFTGraphNode src;
+    IFTGraphNode dst;
+  };
+
+  struct IFTCompactGraph {
+    uint64_t num_nodes;
+    IFTGraphNode *nodes;
+    uint64_t num_edges;
+    IFTGraphEdge *edges;
+  };
 };
 
-struct IFTCompactGraph {
-  uint64_t num_nodes;
-  IFTGraphNode *nodes;
-  uint64_t num_edges;
-  IFTGraphEdge *edges;
+enum GenericRegSet {
+  GENERIC_UNKNOWN,
 };
+
+// alias it to a shorter name
+using GenericIFTCompactGraph =
+    IFTAnalysisGraph<uint64_t, int8_t, GenericRegSet>::IFTCompactGraph;

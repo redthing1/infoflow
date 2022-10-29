@@ -13,14 +13,24 @@ import std.exception : enforce;
 
 import infoflow.models;
 
+extern (C++) int cpp_add(int a, int b);
+
+unittest {
+    assert(cpp_add(1, 2) == 3);
+}
+
+// extern graph code
+enum GenericRegSet {
+    GENERIC_UNKNOWN,
+}
+alias GenericIFTCompactGraph = IFTAnalysisGraph!(ulong, byte, GenericRegSet).IFTGraph.CompactGraph;
+extern (C++) GenericIFTCompactGraph ift_cppgraph_test_1(const GenericIFTCompactGraph input_graph);
+
 template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
     alias TInfoLog = InfoLog!(TRegWord, TMemWord, TRegSet);
     mixin(TInfoLog.GenAliases!("TInfoLog"));
 
     // enum IFTGraphNodeMemSize = __traits(classInstanceSize, IFTGraphNode);
-
-    alias IFTCompactGraph = IFTGraph.CompactGraph;
-    extern(C++) IFTCompactGraph ift_cppgraph_test_1(const IFTCompactGraph input_graph);
 
     final class IFTGraph {
         /// graph vertices/nodes

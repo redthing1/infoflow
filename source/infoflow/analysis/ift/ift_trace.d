@@ -120,7 +120,12 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             if (enable_ift_graph) {
                 if (enable_ift_graph_analysis) {
                     mixin(LOG_INFO!(`"calling cppgraph test 1"`));
-                    TIFTAnalysisGraph.ift_cppgraph_test_1(ift_graph.export_compact());
+                    auto compact_graph = ift_graph.export_compact();
+                    enforce(cpp_add(1, 2) == 3, "cppgraph add failed");
+                    enforce(GenericIFTCompactGraph.sizeof == compact_graph.sizeof,
+                        "compact graph and cpp generic graph have different sizes");
+                    GenericIFTCompactGraph cppgraph_input = cast(GenericIFTCompactGraph) compact_graph;
+                    GenericIFTCompactGraph cppgraph_output = ift_cppgraph_test_1(cppgraph_input);
                     rebuild_graph_caches();
                     propagate_node_flags();
                 }
