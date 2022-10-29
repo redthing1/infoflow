@@ -125,6 +125,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         "compact graph and cpp generic graph have different sizes");
                     GenericIFTCompactGraph cppgraph_input = cast(GenericIFTCompactGraph) compact_graph;
                     GenericIFTCompactGraph cppgraph_output = ift_cppgraph_test_1(cppgraph_input);
+                    // import the graph back
+                    ift_graph.import_compact(cast(TIFTAnalysisGraph.IFTGraph.CompactGraph) cppgraph_output);
                     rebuild_graph_caches();
                     propagate_node_flags();
                 }
