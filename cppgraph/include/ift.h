@@ -118,8 +118,8 @@ public:
   };
 
   struct IFTGraphEdge {
-    IFTGraphNode src;
-    IFTGraphNode dst;
+    IFTGraphNode* src;
+    IFTGraphNode* dst;
   };
 
   struct CompactGraph {
