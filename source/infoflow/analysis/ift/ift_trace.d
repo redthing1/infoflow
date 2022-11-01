@@ -483,7 +483,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 mixin(LOG_DEBUG!(
                         `format("   adding graph edge: %s -> %s", curr_graph_vert, parent_vert)`));
 
-                auto graph_edge = IFTGraphEdge(curr_graph_vert, parent_vert);
+                auto graph_edge = IFTGraphEdge(&curr_graph_vert, &parent_vert);
                 if (!ift_graph.edge_exists(graph_edge, true)) {
                     ift_graph.add_edge(graph_edge);
                 }
@@ -923,7 +923,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     auto child = edge.dst;
                     if ((child.flags & IFTGraphNode.Flags.Nondeterministic) == 0) {
                         child.flags |= IFTGraphNode.Flags.Nondeterministic;
-                        prop_nd_nodes.insertBack(child);
+                        prop_nd_nodes.insertBack(*child);
                     } 
                 }
 

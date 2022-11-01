@@ -220,9 +220,9 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             _store_edge_cache(edge);
 
             // store in src's "to" list
-            _store_neighbors_to_cache(edge.src, edge);
+            _store_neighbors_to_cache(*edge.src, edge);
             // store in dst's "from" list
-            _store_neighbors_from_cache(edge.dst, edge);
+            _store_neighbors_from_cache(*edge.dst, edge);
         }
 
         bool edge_exists(IFTGraphEdge edge, bool cache_only = false) {
@@ -250,11 +250,11 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
         }
 
         private auto filter_edges_from(IFTGraphNode node) {
-            return filter!(edge => edge.src == node)(edges);
+            return filter!(edge => *edge.src == node)(edges);
         }
 
         private auto filter_edges_to(IFTGraphNode node) {
-            return filter!(edge => edge.dst == node)(edges);
+            return filter!(edge => *edge.dst == node)(edges);
         }
 
         /// get edges going from this node
@@ -303,7 +303,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             // }
 
             // stupid method: scan all edges and delete anything referencing this node
-            foreach (edge; this.edges.filter!(edge => edge.src == node || edge.dst == node)) {
+            foreach (edge; this.edges.filter!(edge => *edge.src == node || *edge.dst == node)) {
                 remove_edge(edge);
             }
         }
@@ -320,9 +320,9 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
 
             // delete the edge from the neighbor lists
             // delete from src's "to" list
-            _remove_neighbors_to_cache(edge.src, edge);
+            _remove_neighbors_to_cache(*edge.src, edge);
             // delete from dst's "from" list
-            _remove_neighbors_from_cache(edge.dst, edge);
+            _remove_neighbors_from_cache(*edge.dst, edge);
 
             return true;
         }
@@ -395,9 +395,9 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
 
     struct IFTGraphEdge {
         /// source node
-        IFTGraphNode src;
+        IFTGraphNode* src;
         /// destination node
-        IFTGraphNode dst;
+        IFTGraphNode* dst;
         // /// edge direction
         // bool is_forward = true;
 
