@@ -7,6 +7,7 @@ import std.conv;
 import std.uni;
 import std.range;
 import std.algorithm;
+public import nullablesugar;
 
 enum InfoflowVerbosity {
     debug_ = 3,

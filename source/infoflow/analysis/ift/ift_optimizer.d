@@ -72,11 +72,11 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
             mixin(LOG_INFO!(`format("pruning deterministic subtrees")`));
             mixin(LOG_INFO!(`format(" identifying deterministic subtrees")`));
 
-            auto deterministic_subtree_tops = appender!(IFTGraphNode[]);
+            auto deterministic_subtree_tops = appender!(IFTGraphNode*[]);
 
             {
-                auto unvisited = DList!IFTGraphNode();
-                bool[IFTGraphNode] visited;
+                auto unvisited = DList!(IFTGraphNode*)();
+                bool[IFTGraphNode*] visited;
 
                 foreach (final_vert; ift.final_graph_verts) {
                     unvisited.insertFront(final_vert);
@@ -102,7 +102,7 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
                         // queue neighbors (nodes that point to this one
                         auto targets = ift.ift_graph.get_edges_to(curr);
                         foreach (k, target_edge; targets) {
-                            auto target_node = *target_edge.src;
+                            auto target_node = target_edge.src;
                             if (!visited.get(target_node, false)) {
                                 mixin(LOG_DEBUG!(`format("   queuing node: %s", target_node)`));
                                 unvisited.insertFront(target_node);
@@ -116,9 +116,9 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
 
             // prune all the deterministic subtrees
             {
-                auto unvisited = DList!IFTGraphNode();
-                bool[IFTGraphNode] visited;
-                bool[IFTGraphNode] keep_nodes;
+                auto unvisited = DList!(IFTGraphNode*)();
+                bool[IFTGraphNode*] visited;
+                bool[IFTGraphNode*] keep_nodes;
 
                 foreach (i, det_node; deterministic_subtree_tops) {
                     keep_nodes[det_node] = true;
@@ -155,7 +155,7 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
                     // queue neighbors (nodes that point to this one
                     auto targets = ift.ift_graph.get_edges_to(curr);
                     foreach (k, target_edge; targets) {
-                        auto target_node = *target_edge.src;
+                        auto target_node = target_edge.src;
                         if (!visited.get(target_node, false)) {
                             mixin(LOG_DEBUG!(
                                     `format("     queuing node for prune: %s", target_node)`));

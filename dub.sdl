@@ -3,15 +3,13 @@ description "information flow and binary analysis"
 authors "redthing1"
 copyright "Copyright © 2022, redthing1"
 license "proprietary"
-targetType "library"
-
 dependency "d-graphviz" version="~>0.0.3"
-
-preBuildCommands "cd cppgraph && make -j"
+dependency "nullable-sugar" version="~>0.1.1"
+targetType "library"
 lflags "-L$PACKAGE_DIR/cppgraph" "-l:infoflow_cppgraph.a"
 libs "stdc++"
 extraDependencyFiles "cppgraph/src/*" "cppgraph/include/*"
-
+preBuildCommands "cd cppgraph && make -j"
 configuration "default" {
 	targetType "library"
 	versions "default"
@@ -28,6 +26,4 @@ configuration "unittest" {
 }
 configuration "ddox" {
 	targetType "library"
-
-	x:ddoxFilterArgs "--min-protection=Protected"
 }
