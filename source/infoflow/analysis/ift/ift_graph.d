@@ -334,7 +334,8 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             // for each node, build a list of neighbors, pointing to and from
             // foreach (i, node; parallel(nodes)) {
             // foreach (i, node; nodes) {
-            for (auto i = 0; i < nodes.length; i++) {
+            // for (auto i = 0; i < nodes.length; i++) {
+            foreach (i, _node_val; parallel(nodes)) {
                 auto node = &nodes[i];
                 // clear the caches
                 _clear_neighbors_to_cache(node);
