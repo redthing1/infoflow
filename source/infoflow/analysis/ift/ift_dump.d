@@ -90,77 +90,77 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
 
             // dump backtraces
             // writefln(" backtraces:");
-            mixin(LOG_TRACE!(`"backtraces:"`));
+            // mixin(LOG_TRACE!(`"backtraces:"`));
 
-            bool[long] minimal_commit_set;
+            // bool[long] minimal_commit_set;
 
-            void log_commit_for_source(InfoLeaf source) {
-                minimal_commit_set[source.commit_id] = true;
+            // void log_commit_for_source(InfoLeaf source) {
+            //     minimal_commit_set[source.commit_id] = true;
 
-                if (INFOFLOW_VERBOSITY >= InfoflowVerbosity.trace) {
-                    auto sb = appender!(string);
+            //     if (INFOFLOW_VERBOSITY >= InfoflowVerbosity.trace) {
+            //         auto sb = appender!(string);
 
-                    sb ~= "   " ~ source.toString();
-                    if (source.commit_id >= 0) {
-                        auto commit = ift.trace.commits[source.commit_id];
-                        sb ~= " -> " ~ commit.toString();
-                    } else {
-                        sb ~= " -> <init>";
-                    }
+            //         sb ~= "   " ~ source.toString();
+            //         if (source.commit_id >= 0) {
+            //             auto commit = ift.trace.commits[source.commit_id];
+            //             sb ~= " -> " ~ commit.toString();
+            //         } else {
+            //             sb ~= " -> <init>";
+            //         }
                     
-                    mixin(LOG_TRACE!(`sb.data`));
-                }
-            }
+            //         mixin(LOG_TRACE!(`sb.data`));
+            //     }
+            // }
 
-            // registers
-            foreach (reg_id; ift.clobbered_regs_sources.byKey) {
-                // writefln("  reg %s:", reg_id);
-                mixin(LOG_TRACE!(`format("  reg %s:", reg_id)`));
-                if (reg_id !in ift.clobbered_regs_sources) {
-                    // ???
-                    mixin(LOG_ERROR!(`format("  reg %s not in clobbered_regs_sources", reg_id)`));
-                    enforce(0, "reg not in clobbered_regs_sources");
-                }
-                foreach (source_ix; ift.clobbered_regs_sources[reg_id]) {
-                    log_commit_for_source(ift.global_info_leafs_buffer[source_ix]);
-                }
-            }
+            // // registers
+            // foreach (reg_id; ift.clobbered_regs_sources.byKey) {
+            //     // writefln("  reg %s:", reg_id);
+            //     mixin(LOG_TRACE!(`format("  reg %s:", reg_id)`));
+            //     if (reg_id !in ift.clobbered_regs_sources) {
+            //         // ???
+            //         mixin(LOG_ERROR!(`format("  reg %s not in clobbered_regs_sources", reg_id)`));
+            //         enforce(0, "reg not in clobbered_regs_sources");
+            //     }
+            //     foreach (source_ix; ift.clobbered_regs_sources[reg_id]) {
+            //         log_commit_for_source(ift.global_info_leafs_buffer[source_ix]);
+            //     }
+            // }
 
-            // memory
-            foreach (mem_addr; ift.clobbered_mem_sources.byKey) {
-                // writefln("  mem[%04x]:", mem_addr);
-                mixin(LOG_TRACE!(`format("  mem[%04x]:", mem_addr)`));
-                if (mem_addr !in ift.clobbered_mem_sources) {
-                    // ???
-                    mixin(LOG_ERROR!(
-                            `format("  mem[%04x] not in clobbered_mem_sources", mem_addr)`));
-                    enforce(0, "mem not in clobbered_mem_sources");
-                }
-                foreach (source_ix; ift.clobbered_mem_sources[mem_addr]) {
-                    log_commit_for_source(ift.global_info_leafs_buffer[source_ix]);
-                }
-            }
+            // // memory
+            // foreach (mem_addr; ift.clobbered_mem_sources.byKey) {
+            //     // writefln("  mem[%04x]:", mem_addr);
+            //     mixin(LOG_TRACE!(`format("  mem[%04x]:", mem_addr)`));
+            //     if (mem_addr !in ift.clobbered_mem_sources) {
+            //         // ???
+            //         mixin(LOG_ERROR!(
+            //                 `format("  mem[%04x] not in clobbered_mem_sources", mem_addr)`));
+            //         enforce(0, "mem not in clobbered_mem_sources");
+            //     }
+            //     foreach (source_ix; ift.clobbered_mem_sources[mem_addr]) {
+            //         log_commit_for_source(ift.global_info_leafs_buffer[source_ix]);
+            //     }
+            // }
 
-            // csr
-            foreach (csr_id; ift.clobbered_csr_sources.byKey) {
-                // writefln("  csr#%x:", csr_id);
-                mixin(LOG_TRACE!(`format("  csr#%x:", csr_id)`));
-                if (csr_id !in ift.clobbered_csr_sources) {
-                    // ???
-                    mixin(LOG_ERROR!(`format("  csr#%x not in clobbered_csr_sources", csr_id)`));
-                    enforce(0, "csr not in clobbered_csr_sources");
-                }
-                foreach (source_ix; ift.clobbered_csr_sources[csr_id]) {
-                    log_commit_for_source(ift.global_info_leafs_buffer[source_ix]);
-                }
-            }
+            // // csr
+            // foreach (csr_id; ift.clobbered_csr_sources.byKey) {
+            //     // writefln("  csr#%x:", csr_id);
+            //     mixin(LOG_TRACE!(`format("  csr#%x:", csr_id)`));
+            //     if (csr_id !in ift.clobbered_csr_sources) {
+            //         // ???
+            //         mixin(LOG_ERROR!(`format("  csr#%x not in clobbered_csr_sources", csr_id)`));
+            //         enforce(0, "csr not in clobbered_csr_sources");
+            //     }
+            //     foreach (source_ix; ift.clobbered_csr_sources[csr_id]) {
+            //         log_commit_for_source(ift.global_info_leafs_buffer[source_ix]);
+            //     }
+            // }
 
-            writefln(" theoritical minimization:");
-            auto num_minimal_commits = minimal_commit_set.length;
-            writefln("  minimal commits: %s", num_minimal_commits);
-            writefln("  total commits: %s", ift.trace.commits.length);
-            writefln("  theoretical minimum untouched commits: %.2f%%",
-                (100.0 * num_minimal_commits) / ift.trace.commits.length);
+            // writefln(" theoritical minimization:");
+            // auto num_minimal_commits = minimal_commit_set.length;
+            // writefln("  minimal commits: %s", num_minimal_commits);
+            // writefln("  total commits: %s", ift.trace.commits.length);
+            // writefln("  theoretical minimum untouched commits: %.2f%%",
+            //     (100.0 * num_minimal_commits) / ift.trace.commits.length);
         }
 
         void dump_graph() {
@@ -170,7 +170,17 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
 
             mixin(LOG_TRACE!(`"  nodes"`));
             foreach (node; ift.ift_graph.nodes) {
-                mixin(LOG_TRACE!(`format("   %s", node)`));
+                // mixin(LOG_TRACE!(`format("   %s", node)`));
+                mixin(LOG_TRACE!(`format("   %s (%08x)", node, cast(void*) node)`));
+                // hex dump the node
+                enum node_sizeof = __traits(classInstanceSize, typeof(node));
+                auto raw_node = cast(ubyte*) node;
+                write("    hex: ");
+                for (int i = 0; i < node_sizeof; i++) {
+                    // mixin(LOG_TRACE!(`format("%02x ", raw_node[i])`));
+                    writef("%02x ", raw_node[i]);
+                }
+                mixin(LOG_TRACE!(`""`));
             }
             mixin(LOG_TRACE!(`"  edges"`));
             foreach (edge; ift.ift_graph.edges) {

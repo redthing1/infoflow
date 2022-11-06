@@ -31,17 +31,6 @@ enum InfoType : uint32_t {
   InfoType_Reserved4,
 };
 
-// struct InfoNode {
-//   InfoType type;
-//   TRegWord data;
-//   TRegWord value;
-// };
-
-// struct InfoView {
-//   InfoNode node;
-//   long commit_id;
-// };
-
 enum IFTGraphNodeFlags {
   IFTGraphNodeFlags_None = 0x0,
   IFTGraphNodeFlags_Final = 1 << 0,
@@ -96,7 +85,7 @@ public:
 
   struct InfoView {
     InfoNode node;
-    long commit_id;
+    int64_t commit_id;
 
     public:
       std::string to_string() const {
@@ -115,6 +104,8 @@ public:
   struct IFTGraphNode {
     typename InfoLog<TRegWord, TMemWord, TRegSet>::InfoView info_view;
     IFTGraphNodeFlags flags = IFTGraphNodeFlags::IFTGraphNodeFlags_None;
+
+    static_assert(sizeof(info_view) == 32, "InfoView size is not 32 bytes");
 
     public:
       std::string to_string() const {

@@ -428,6 +428,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
     final class IFTGraphNode {
         /// the information as it existed in a point in time
         InfoView info_view;
+        // static assert(0, format("size of info_view: %s", InfoView.sizeof));
         Flags flags = Flags.None;
 
         this(InfoView info_view) {
