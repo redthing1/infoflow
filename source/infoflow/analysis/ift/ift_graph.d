@@ -372,7 +372,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
 
         extern (C++) struct CompactGraph {
             ulong num_nodes;
-            IFTGraphNode* nodes;
+            IFTGraphNode nodes;
             ulong num_edges;
             IFTGraphEdge* edges;
         }
@@ -396,9 +396,9 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
 
     struct IFTGraphEdge {
         /// source node
-        IFTGraphNode* src;
+        IFTGraphNode src;
         /// destination node
-        IFTGraphNode* dst;
+        IFTGraphNode dst;
         // /// edge direction
         // bool is_forward = true;
 
@@ -407,9 +407,8 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             return format("%s -> %s", *src, *dst);
         }
     }
-    static assert (IFTGraphEdge.sizeof == 16, format("expected IFTGraphEdge to be 16 bytes, but it's %d", IFTGraphEdge.sizeof));
 
-    struct IFTGraphNode {
+    final class IFTGraphNode {
         /// the information as it existed in a point in time
         InfoView info_view;
         Flags flags = Flags.None;
@@ -431,7 +430,7 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             Reserved7 = 1 << 8,
         }
 
-        string toString() const {
+        override string toString() const {
             import std.string : format;
             import std.conv : to;
             import std.array : appender, array;
@@ -444,5 +443,4 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             return sb.array;
         }
     }
-    static assert (IFTGraphNode.sizeof == 40, format("expected IFTGraphNode to be 40 bytes, but it's %d", IFTGraphNode.sizeof));
 }
