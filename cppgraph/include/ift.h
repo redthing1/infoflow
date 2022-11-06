@@ -8,7 +8,7 @@
 
 // #define TRegWord uint64_t
 
-enum InfoType {
+enum InfoType : uint32_t {
   InfoType_Unknown = 0x0,
   InfoType_None = 0x1,
   InfoType_Register = 1 << 2,  // an abstract register
@@ -130,11 +130,21 @@ public:
   struct IFTGraphEdge {
     IFTGraphNode* src;
     IFTGraphNode* dst;
+
+    public:
+      std::string to_string() const {
+        std::stringstream ss;
+        ss << "IFTGraphEdge(";
+        ss << "src=" << src->to_string() << ", ";
+        ss << "dst=" << dst->to_string();
+        ss << ")";
+        return ss.str();
+      }
   };
 
   struct CompactGraph {
     uint64_t num_nodes;
-    IFTGraphNode *nodes;
+    IFTGraphNode **nodes;
     uint64_t num_edges;
     IFTGraphEdge *edges;
   };

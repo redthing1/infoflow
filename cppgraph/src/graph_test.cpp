@@ -23,19 +23,17 @@ GenericIFTCompactGraph ift_cppgraph_test_1(const GenericIFTCompactGraph input_gr
   std::cout << "nodes: " << std::endl;
   for (uint64_t i = 0; i < graph.num_nodes; i++) {
     // std::cout << "  " << graph.nodes[i].info_view.to_string() << std::endl;
-    std::cout << " #" << i << ": " << graph.nodes[i].to_string() << std::endl;
+    std::cout << " #" << i << ": " << graph.nodes[i]->to_string() << std::endl;
   }
 
   // list the edges
   std::cout << "edges: " << std::endl;
   for (uint64_t i = 0; i < graph.num_edges; i++) {
-    // std::cout << " #" << i << ": " << graph.edges[i].src << " -> " << graph.edges[i].dst << std::endl;
-    std::cout << " #" << i << ": ";
+    // std::cout << " #" << i << ": ";
     // std::cout << graph.edges[i].src->to_string() << " -> ";
     // std::cout << graph.edges[i].dst->to_string() << std::endl;
 
-    std::cout << graph.edges[i].src->to_string() << " (" << graph.edges[i].src << ") -> ";
-    std::cout << graph.edges[i].dst->to_string() << " (" << graph.edges[i].dst << ")" << std::endl;
+    std::cout << " #" << i << ": " << graph.edges[i].to_string() << std::endl;
   }
 
   return graph;

@@ -174,9 +174,7 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
             }
             mixin(LOG_TRACE!(`"  edges"`));
             foreach (edge; ift.ift_graph.edges) {
-                // mixin(LOG_TRACE!(`format("   %s", edge)`));
-                mixin(LOG_TRACE!(`format("   %s (%08x) -> %s (%08x)", *edge.src, edge.src, *edge.dst, edge.dst)`));
-                // mixin(LOG_TRACE!(`format("    (%08x) -> (%08x)", edge.src, edge.dst)`));
+                mixin(LOG_TRACE!(`format("   %s", edge)`));
             }
 
             // mixin(LOG_INFO!(`"  stats"`));

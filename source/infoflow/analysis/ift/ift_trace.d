@@ -449,9 +449,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 // auto curr_node = curr.node;
 
                 auto cached_graph_vert = ift_graph.find_in_cache(commit_ix, curr_node);
-                if (cached_graph_vert.has) {
+                if (cached_graph_vert) {
                     // if (likely(cached_graph_vert !is null)) {
-                    curr_graph_vert = cached_graph_vert.get;
+                    curr_graph_vert = cached_graph_vert;
 
                     mixin(LOG_DEBUG!(
                             `format("   reused graph node: %s", curr_graph_vert)`));
@@ -459,7 +459,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     version (analysis_log)
                         graph_nodes_cache_hits_acc++;
                 } else {
-                    curr_graph_vert = IFTGraphNode(InfoView(curr_node, commit_ix));
+                    curr_graph_vert = new IFTGraphNode(InfoView(curr_node, commit_ix));
                     ift_graph.add_node(curr_graph_vert);
 
                     mixin(LOG_DEBUG!(
@@ -483,7 +483,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 mixin(LOG_DEBUG!(
                         `format("   adding graph edge: %s -> %s", curr_graph_vert, parent_vert)`));
 
-                auto graph_edge = IFTGraphEdge(&curr_graph_vert, &parent_vert);
+                auto graph_edge = IFTGraphEdge(curr_graph_vert, parent_vert);
                 if (!ift_graph.edge_exists(graph_edge, true)) {
                     ift_graph.add_edge(graph_edge);
                 }
@@ -518,10 +518,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 IFTGraphNode last_node_vert;
 
                 auto cached_graph_vert = ift_graph.find_in_cache(last_node_last_touch_ix, last_node);
-                if (cached_graph_vert.has) {
-                    last_node_vert = cached_graph_vert.get;
+                if (cached_graph_vert) {
+                    last_node_vert = cached_graph_vert;
                 } else {
-                    last_node_vert = IFTGraphNode(InfoView(last_node, last_node_last_touch_ix));
+                    last_node_vert = new IFTGraphNode(InfoView(last_node, last_node_last_touch_ix));
                     ift_graph.add_node(last_node_vert);
                 }
 
@@ -923,7 +923,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     auto child = edge.dst;
                     if ((child.flags & IFTGraphNode.Flags.Nondeterministic) == 0) {
                         child.flags |= IFTGraphNode.Flags.Nondeterministic;
-                        prop_nd_nodes.insertBack(*child);
+                        prop_nd_nodes.insertBack(child);
                     } 
                 }
 

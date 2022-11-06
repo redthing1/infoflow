@@ -145,7 +145,7 @@ template InfoLog(TRegWord, TMemWord, TRegSet) {
     }
 
     /// represents a type of information
-    enum InfoType {
+    enum InfoType : uint {
         Unknown = 0x0,
         None = 0x1,
         Register = 1 << 2, // an abstract register
