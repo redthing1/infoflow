@@ -920,7 +920,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 auto node = prop_nd_nodes.front;
                 prop_nd_nodes.removeFront();
 
-                mixin(LOG_TRACE!(`format(" propagating flags for node: %s", node)`));
+                mixin(LOG_TRACE!(`format(" propagating flags for node: %s", *node)`));
 
                 auto children = ift_graph.get_edges_from(node);
                 foreach (i, edge; children) {
