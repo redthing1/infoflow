@@ -30,7 +30,8 @@ GenericIFTCompactGraph ift_cppgraph_test_1(const GenericIFTCompactGraph input_gr
     // hex dump the node
     std::cout << "  hex: ";
     for (uint64_t j = 0; j < sizeof(GenericIFTGraphNode); j++) {
-      std::cout << std::hex << (int)((uint8_t*)graph.nodes[i])[j] << " ";
+      // std::cout << std::hex << (int)((uint8_t*)graph.nodes[i])[j] << " ";
+      printf("%02x ", (int)((uint8_t*)graph.nodes[i])[j]);
     }
     std::cout << std::endl;
   }
