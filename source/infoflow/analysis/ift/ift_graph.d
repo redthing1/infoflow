@@ -367,46 +367,23 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
 
         extern (C++) struct CompactGraph {
             ulong num_nodes;
-            IFTGraphNode** nodes;
+            IFTGraphNode* nodes;
             ulong num_edges;
             IFTGraphEdge* edges;
         }
 
         CompactGraph export_compact() {
-            // return CompactGraph(
-            //     num_verts,
-            //     nodes.ptr,
-            //     num_edges,
-            //     edges.ptr
-            // );
-            // repack the things into a static array
-            auto nodes_buf = new IFTGraphNode*[num_verts];
-            auto edges_buf = new IFTGraphEdge[num_edges];
-            foreach (i, node; nodes) {
-                nodes_buf[i] = cast(IFTGraphNode*) node;
-            }
-            foreach (i, edge; edges) {
-                edges_buf[i] = edge;
-            }
             return CompactGraph(
                 num_verts,
-                nodes_buf.ptr,
+                nodes.ptr,
                 num_edges,
-                edges_buf.ptr,
+                edges.ptr
             );
         }
 
         void import_compact(CompactGraph graph) {
-            // this.nodes = graph.nodes[0 .. graph.num_nodes];
-            // this.edges = graph.edges[0 .. graph.num_edges];
-            this.nodes = [];
-            this.edges = [];
-            foreach (i; 0 .. graph.num_nodes) {
-                this.nodes ~= cast(IFTGraphNode) graph.nodes[i];
-            }
-            foreach (i; 0 .. graph.num_edges) {
-                this.edges ~= graph.edges[i];
-            }
+            this.nodes = graph.nodes[0 .. graph.num_nodes];
+            this.edges = graph.edges[0 .. graph.num_edges];
 
             invalidate_caches();
         }
