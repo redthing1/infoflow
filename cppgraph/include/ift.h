@@ -115,6 +115,16 @@ public:
   struct IFTGraphNode {
     typename InfoLog<TRegWord, TMemWord, TRegSet>::InfoView info_view;
     IFTGraphNodeFlags flags = IFTGraphNodeFlags::IFTGraphNodeFlags_None;
+
+    public:
+      std::string to_string() const {
+        std::stringstream ss;
+        ss << "IFTGraphNode(";
+        ss << "info_view=" << info_view.to_string() << ", ";
+        ss << "flags=" << flags;
+        ss << ")";
+        return ss.str();
+      }
   };
 
   struct IFTGraphEdge {
@@ -135,7 +145,4 @@ enum GenericRegSet {
 };
 
 // alias it to a shorter name
-// using GenericIFTCompactGraph =
-//     IFTAnalysisGraph<uint64_t, int8_t, GenericRegSet>::IFTCompactGraph;
-using GenericIFTCompactGraph =
-    IFTAnalysisGraph<unsigned long, signed char, GenericRegSet>::CompactGraph;
+typedef IFTAnalysisGraph<uint64_t, int8_t, GenericRegSet>::CompactGraph GenericIFTCompactGraph;
