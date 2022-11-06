@@ -119,14 +119,14 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
             if (enable_ift_graph) {
                 if (enable_ift_graph_analysis) {
-                    // mixin(LOG_INFO!(`"calling cppgraph test 1"`));
-                    // auto compact_graph = ift_graph.export_compact();
-                    // enforce(GenericIFTCompactGraph.sizeof == compact_graph.sizeof,
-                    //     "compact graph and cpp generic graph have different sizes");
-                    // GenericIFTCompactGraph cppgraph_input = cast(GenericIFTCompactGraph) compact_graph;
-                    // GenericIFTCompactGraph cppgraph_output = ift_cppgraph_test_1(cppgraph_input);
-                    // // import the graph back
-                    // ift_graph.import_compact(cast(TIFTAnalysisGraph.IFTGraph.CompactGraph) cppgraph_output);
+                    mixin(LOG_INFO!(`"calling cppgraph test 1"`));
+                    auto compact_graph = ift_graph.export_compact();
+                    enforce(GenericIFTCompactGraph.sizeof == compact_graph.sizeof,
+                        "compact graph and cpp generic graph have different sizes");
+                    GenericIFTCompactGraph cppgraph_input = cast(GenericIFTCompactGraph) compact_graph;
+                    GenericIFTCompactGraph cppgraph_output = ift_cppgraph_test_1(cppgraph_input);
+                    // import the graph back
+                    ift_graph.import_compact(cast(TIFTAnalysisGraph.IFTGraph.CompactGraph) cppgraph_output);
                     rebuild_graph_caches();
                     propagate_node_flags();
                 }
@@ -907,7 +907,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // make a list of non-deterministic terminal nodes
             auto prop_nd_nodes = DList!(IFTGraphNode*)();
             mixin(LOG_INFO!(`" building list of non-deterministic terminal nodes"`));
-            foreach (i, node; ift_graph.nodes) {
+            for (auto i = 0; i < ift_graph.nodes.length; i++) {
+                auto node = &ift_graph.nodes[i];
                 if ((node.flags & IFTGraphNode.Flags.Nondeterministic) > 0)
                     prop_nd_nodes.insertBack(node);
             }
@@ -926,7 +927,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     auto child = edge.dst;
                     if ((child.flags & IFTGraphNode.Flags.Nondeterministic) == 0) {
                         child.flags |= IFTGraphNode.Flags.Nondeterministic;
-                        prop_nd_nodes.insertBack(*child);
+                        prop_nd_nodes.insertBack(child);
                     } 
                 }
 
