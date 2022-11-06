@@ -403,8 +403,8 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
         // bool is_forward = true;
 
         string toString() const {
-            // return format("%s -> %s", src, dst);
-            return format("%s -> %s", *src, *dst);
+            return format("%s -> %s", src, dst);
+            // return format("%s -> %s", *src, *dst);
         }
     }
     static assert (IFTGraphEdge.sizeof == 16, format("expected IFTGraphEdge to be 16 bytes, but it's %d", IFTGraphEdge.sizeof));
