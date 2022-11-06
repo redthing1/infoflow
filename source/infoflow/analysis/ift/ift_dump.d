@@ -164,18 +164,20 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
         }
 
         void dump_graph() {
-            // // also dump ift graph
-            // // writefln(" ift graph:");
-            // mixin(LOG_INFO!(`" ift graph:"`));
+            // also dump ift graph
+            // writefln(" ift graph:");
+            mixin(LOG_INFO!(`" ift graph:"`));
 
-            // mixin(LOG_TRACE!(`"  nodes"`));
-            // foreach (node; ift.ift_graph.nodes) {
-            //     mixin(LOG_TRACE!(`format("   %s", node)`));
-            // }
-            // mixin(LOG_TRACE!(`"  edges"`));
-            // foreach (edge; ift.ift_graph.edges) {
-            //     mixin(LOG_TRACE!(`format("   %s", edge)`));
-            // }
+            mixin(LOG_TRACE!(`"  nodes"`));
+            foreach (node; ift.ift_graph.nodes) {
+                mixin(LOG_TRACE!(`format("   %s", node)`));
+            }
+            mixin(LOG_TRACE!(`"  edges"`));
+            foreach (edge; ift.ift_graph.edges) {
+                // mixin(LOG_TRACE!(`format("   %s", edge)`));
+                mixin(LOG_TRACE!(`format("   %s (%08x) -> %s (%08x)", *edge.src, edge.src, *edge.dst, edge.dst)`));
+                // mixin(LOG_TRACE!(`format("    (%08x) -> (%08x)", edge.src, edge.dst)`));
+            }
 
             // mixin(LOG_INFO!(`"  stats"`));
             // mixin(LOG_INFO!(`"   verts: %s", ift.ift_graph.num_verts`));

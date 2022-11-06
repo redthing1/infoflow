@@ -331,7 +331,8 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             import std.parallelism : parallel;
 
             // for each node, build a list of neighbors, pointing to and from
-            foreach (i, node; parallel(nodes)) {
+            // foreach (i, node; parallel(nodes)) {
+            foreach (i, node; nodes) {
                 // clear the caches
                 _clear_neighbors_to_cache(node);
                 _clear_neighbors_from_cache(node);
@@ -402,10 +403,11 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
         // bool is_forward = true;
 
         string toString() const {
-            return format("%s -> %s", src, dst);
-            // return format("%s %s %s", src, is_forward ? "->" : "<-", dst);
+            // return format("%s -> %s", src, dst);
+            return format("%s -> %s", *src, *dst);
         }
     }
+    static assert (IFTGraphEdge.sizeof == 16, format("expected IFTGraphEdge to be 16 bytes, but it's %d", IFTGraphEdge.sizeof));
 
     struct IFTGraphNode {
         /// the information as it existed in a point in time
@@ -442,4 +444,5 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             return sb.array;
         }
     }
+    static assert (IFTGraphNode.sizeof == 40, format("expected IFTGraphNode to be 40 bytes, but it's %d", IFTGraphNode.sizeof));
 }

@@ -146,3 +146,5 @@ enum GenericRegSet {
 
 // alias it to a shorter name
 typedef IFTAnalysisGraph<uint64_t, int8_t, GenericRegSet>::CompactGraph GenericIFTCompactGraph;
+typedef IFTAnalysisGraph<uint64_t, int8_t, GenericRegSet>::IFTGraphNode GenericIFTGraphNode;
+typedef IFTAnalysisGraph<uint64_t, int8_t, GenericRegSet>::IFTGraphEdge GenericIFTGraphEdge;
