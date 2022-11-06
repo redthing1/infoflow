@@ -75,7 +75,7 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
             auto deterministic_subtree_tops = appender!(IFTGraphNode[]);
 
             {
-                auto unvisited = DList!IFTGraphNode();
+                auto unvisited = DList!(IFTGraphNode*)();
                 bool[IFTGraphNode] visited;
 
                 foreach (final_vert; ift.final_graph_verts) {
@@ -116,7 +116,7 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
 
             // prune all the deterministic subtrees
             {
-                auto unvisited = DList!IFTGraphNode();
+                auto unvisited = DList!(IFTGraphNode*)();
                 bool[IFTGraphNode] visited;
                 bool[IFTGraphNode] keep_nodes;
 

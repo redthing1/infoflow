@@ -45,7 +45,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         InfoLeafIndices[TRegSet] clobbered_regs_sources;
         InfoLeafIndices[TRegWord] clobbered_mem_sources;
         InfoLeafIndices[TRegWord] clobbered_csr_sources;
-        IFTGraphNode[] final_graph_verts;
+        IFTGraphNode*[] final_graph_verts;
 
         version (analysis_log) {
             shared long log_visited_info_nodes;
@@ -394,7 +394,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             long owner_commit_ix; // which commit this infonode is in
             long walk_commit_ix; // which commit to walk this back from
 
-            Nullable!IFTGraphNode parent;
+            // Nullable!IFTGraphNode parent;
+            IFTGraphNode* parent_ptr;
 
             // size_t toHash() const @safe nothrow {
             //     size_t hash;
@@ -410,7 +411,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
         struct InformationFlowBacktrace {
             size_t[] terminal_leaves;
-            Nullable!IFTGraphNode maybe_graph_vert;
+            IFTGraphNode* maybe_graph_vert;
         }
 
         InformationFlowBacktrace backtrace_information_flow(InfoNode last_node) {
@@ -437,33 +438,35 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // auto terminal_leaves = appender!(InfoLeaf[]);
             auto terminal_leaves_ids = appender!(size_t[]);
 
-            IFTGraphNode create_graph_vert(IFTGraphNode parent_vert, InfoNode curr_node, ulong commit_ix) {
+            IFTGraphNode* create_graph_vert(IFTGraphNode* parent_vert_ptr, InfoNode curr_node, ulong commit_ix) {
                 // create a graph vert for this commit
                 version (analysis_log)
                     graph_nodes_walked_acc++;
 
                 // use a cache so that we don't create duplicate vertices
-                IFTGraphNode curr_graph_vert;
+                // IFTGraphNode curr_graph_vert;
+                // pointer to the node within the actual graph
+                IFTGraphNode* curr_graph_vert_ptr;
 
-                // auto parent_vert = curr.parent.get;
+                // auto parent_vert = curr.parent_ptr;
                 // auto curr_node = curr.node;
 
                 auto cached_graph_vert = ift_graph.find_in_cache(commit_ix, curr_node);
-                if (cached_graph_vert.has) {
+                if (cached_graph_vert) {
                     // if (likely(cached_graph_vert !is null)) {
-                    curr_graph_vert = cached_graph_vert.get;
+                    curr_graph_vert_ptr = cached_graph_vert;
 
                     mixin(LOG_DEBUG!(
-                            `format("   reused graph node: %s", curr_graph_vert)`));
+                            `format("   reused graph node: %s",  *curr_graph_vert_ptr)`));
 
                     version (analysis_log)
                         graph_nodes_cache_hits_acc++;
                 } else {
-                    curr_graph_vert = IFTGraphNode(InfoView(curr_node, commit_ix));
-                    ift_graph.add_node(curr_graph_vert);
+                    auto curr_graph_vert = IFTGraphNode(InfoView(curr_node, commit_ix));
+                    curr_graph_vert_ptr = ift_graph.add_node(curr_graph_vert);
 
                     mixin(LOG_DEBUG!(
-                            `format("   added graph node: %s", curr_graph_vert)`));
+                            `format("   added graph node: %s", *curr_graph_vert_ptr)`));
 
                     version (analysis_log)
                         graph_nodes_cache_misses_acc++;
@@ -477,18 +480,18 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     vert_flags |= IFTGraphNode.Flags.Nondeterministic;
                 
             
-                curr_graph_vert.flags = vert_flags;
+                curr_graph_vert_ptr.flags = vert_flags;
 
                 // connect ourselves to our parent (parent comes in the future, so edge us -> parent)
                 mixin(LOG_DEBUG!(
-                        `format("   adding graph edge: %s -> %s", curr_graph_vert, parent_vert)`));
+                        `format("   adding graph edge: %s -> %s", *curr_graph_vert_ptr, *parent_vert_ptr)`));
 
-                auto graph_edge = IFTGraphEdge(&curr_graph_vert, &parent_vert);
+                auto graph_edge = IFTGraphEdge(curr_graph_vert_ptr, parent_vert_ptr);
                 if (!ift_graph.edge_exists(graph_edge, true)) {
                     ift_graph.add_edge(graph_edge);
                 }
 
-                return curr_graph_vert;
+                return curr_graph_vert_ptr;
             }
 
             pragma(inline, true) void add_info_leaf(InfoNodeWalk walk, InfoLeaf leaf) {
@@ -506,26 +509,26 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 // add a leaf node to the graph
                 if (enable_ift_graph) {
-                    enforce(!walk.parent.isNull, "walk.parent is null");
-                    auto graph_vert = create_graph_vert(walk.parent.get, leaf.node, leaf.commit_id);
+                    enforce(walk.parent_ptr !is null, "walk.parent is null");
+                    auto graph_vert = create_graph_vert(walk.parent_ptr, leaf.node, leaf.commit_id);
                 }
             }
 
-            Nullable!IFTGraphNode maybe_last_node_vert;
+            IFTGraphNode* maybe_last_node_vert;
             if (enable_ift_graph) {
                 // add our "last node" to the graph
 
-                IFTGraphNode last_node_vert;
+                IFTGraphNode* last_node_vert_ptr;
 
                 auto cached_graph_vert = ift_graph.find_in_cache(last_node_last_touch_ix, last_node);
-                if (cached_graph_vert.has) {
-                    last_node_vert = cached_graph_vert.get;
+                if (cached_graph_vert) {
+                    last_node_vert_ptr = cached_graph_vert;
                 } else {
-                    last_node_vert = IFTGraphNode(InfoView(last_node, last_node_last_touch_ix));
-                    ift_graph.add_node(last_node_vert);
+                    auto last_node_vert = IFTGraphNode(InfoView(last_node, last_node_last_touch_ix));
+                    last_node_vert_ptr = ift_graph.add_node(last_node_vert);
                 }
 
-                maybe_last_node_vert = last_node_vert;
+                maybe_last_node_vert = last_node_vert_ptr;
             }
 
             // 3. queue our initial node
@@ -646,9 +649,9 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                         touching_commit_ix, curr, touching_commit)`));
 
                 // create an inner node in the graph for this commit
-                Nullable!IFTGraphNode maybe_curr_graph_vert;
+                IFTGraphNode* maybe_curr_graph_vert;
                 if (enable_ift_graph) {
-                    auto parent = curr.parent.get();
+                    auto parent = curr.parent_ptr;
                     auto vert_commit_id = touching_commit_ix;
 
                     // ensure parent is not the same as the current node: if it is make sure we don't create a cycle
@@ -661,7 +664,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     }
 
                     // update node flags
-                    maybe_curr_graph_vert.get.flags = IFTGraphNode.Flags.Inner;
+                    maybe_curr_graph_vert.flags = IFTGraphNode.Flags.Inner;
                 }
 
                 // get all dependencies of this commit
@@ -773,7 +776,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     .terminal_leaves;
 
                 if (enable_ift_graph) {
-                    final_graph_verts ~= reg_backtrace.maybe_graph_vert.get;
+                    final_graph_verts ~= reg_backtrace.maybe_graph_vert;
                 }
             }
 
@@ -785,7 +788,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 clobbered_mem_sources[last_node.data] = mem_backtrace.terminal_leaves;
 
                 if (enable_ift_graph) {
-                    final_graph_verts ~= mem_backtrace.maybe_graph_vert.get;
+                    final_graph_verts ~= mem_backtrace.maybe_graph_vert;
                 }
             }
 
@@ -797,7 +800,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 clobbered_csr_sources[last_node.data] = csr_backtrace.terminal_leaves;
 
                 if (enable_ift_graph) {
-                    final_graph_verts ~= csr_backtrace.maybe_graph_vert.get;
+                    final_graph_verts ~= csr_backtrace.maybe_graph_vert;
                 }
             }
 
@@ -902,7 +905,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             auto tmr_start = MonoTime.currTime;
 
             // make a list of non-deterministic terminal nodes
-            auto prop_nd_nodes = DList!IFTGraphNode();
+            auto prop_nd_nodes = DList!(IFTGraphNode*)();
             mixin(LOG_INFO!(`" building list of non-deterministic terminal nodes"`));
             foreach (i, node; ift_graph.nodes) {
                 if ((node.flags & IFTGraphNode.Flags.Nondeterministic) > 0)
