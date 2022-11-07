@@ -2,6 +2,7 @@
 	"fileVersion": 1,
 	"versions": {
 		"d-graphviz": "0.0.3",
+		"nullable-sugar": "0.1.1",
 		"silly": "1.1.1"
 	}
 }

@@ -236,7 +236,7 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                 }
                 foreach (ift_edge; ift.ift_graph.edges) {
                     // edge(edge.src, edge.dst, ["style": "dashed", "label": edge.label]);
-                    edge(ift_edge.src, ift_edge.dst);
+                    edge(*ift_edge.src, *ift_edge.dst);
                 }
             }
 
