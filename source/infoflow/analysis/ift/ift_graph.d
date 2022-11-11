@@ -304,7 +304,8 @@ template IFTAnalysisGraph(TRegWord, TMemWord, TRegSet) {
             import std.parallelism : parallel;
 
             // for each node, build a list of neighbors, pointing to and from
-            foreach (i, node; parallel(nodes)) {
+            // foreach (i, node; parallel(nodes)) {
+            foreach (i, node; nodes) {
                 // clear the caches
                 _clear_neighbors_to_cache(node);
                 _clear_neighbors_from_cache(node);
