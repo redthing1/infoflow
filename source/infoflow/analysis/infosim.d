@@ -61,6 +61,11 @@ template InfoSimAnalysis(TRegWord, TMemWord, TRegSet) {
             foreach (reg_id; REG_IDS) {
                 emu_state.reg[reg_id] = snap_init.reg[reg_id];
             }
+
+            // copy csr from initial state
+            foreach (csr_id; snap_init.csr.byKey) {
+                emu_state.csr[csr_id] = snap_init.csr[csr_id];
+            }
         }
 
         void compare_machine_state(Snapshot snap) {
