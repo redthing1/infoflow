@@ -32,6 +32,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
     final class IFTAnalyzer : TBaseAnalysis.BaseAnalyzer {
         Commit clobber;
         IFTDataType included_data = IFTDataType.Standard;
+        bool function(InfoNode) last_node_filter = x => true;
 
         bool enable_ift_graph = false;
         IFTGraph ift_graph = new IFTGraph();
@@ -700,48 +701,62 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         }
 
         void analyze_flows() {
-            import std.parallelism;
-
-            // 1. backtrace all clobbered registers
-            // queue work
             InfoNode[] reg_last_nodes;
-            auto clobbered_reg_ids = clobber.get_effect_reg_ids().array;
-            auto clobbered_reg_values = clobber.get_effect_reg_values().array;
-            for (auto clobbered_i = 0; clobbered_i < clobbered_reg_ids.length; clobbered_i++) {
-                auto reg_id = clobbered_reg_ids[clobbered_i].to!TRegSet;
-                auto reg_val = clobbered_reg_values[clobbered_i];
-
-                // create an info node for this point
-                auto reg_last_node = InfoNode(InfoType.Register, reg_id, reg_val);
-                reg_last_nodes ~= reg_last_node;
-            }
-
-            // 2. backtrace all clobbered memory
-            // queue work
             InfoNode[] mem_last_nodes;
-            auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
-            auto clobbered_mem_values = clobber.get_effect_mem_values().array;
-            for (auto clobbered_i = 0; clobbered_i < clobbered_mem_addrs.length; clobbered_i++) {
-                auto mem_addr = clobbered_mem_addrs[clobbered_i];
-                auto mem_val = clobbered_mem_values[clobbered_i];
+            InfoNode[] csr_last_nodes;
 
-                // create an info node for this point
-                auto mem_last_node = InfoNode(InfoType.Memory, mem_addr, mem_val);
-                mem_last_nodes ~= mem_last_node;
+            void queue_clobbered_regs() {
+                // 1. backtrace all clobbered registers
+                // queue work
+                auto clobbered_reg_ids = clobber.get_effect_reg_ids().array;
+                auto clobbered_reg_values = clobber.get_effect_reg_values().array;
+                for (auto clobbered_i = 0; clobbered_i < clobbered_reg_ids.length;
+                    clobbered_i++) {
+                    auto reg_id = clobbered_reg_ids[clobbered_i].to!TRegSet;
+                    auto reg_val = clobbered_reg_values[clobbered_i];
+
+                    // create an info node for this point
+                    auto reg_last_node = InfoNode(InfoType.Register, reg_id, reg_val);
+                    if (!last_node_filter(reg_last_node))
+                        continue; // filter out unselected nodes
+                    reg_last_nodes ~= reg_last_node;
+                }
             }
 
-            // 3. backtrace all clobbered csrs
-            // queue work
-            InfoNode[] csr_last_nodes;
-            auto clobbered_csr_ids = clobber.get_effect_csr_ids().array;
-            auto clobbered_csr_values = clobber.get_effect_csr_values().array;
-            for (auto clobbered_i = 0; clobbered_i < clobbered_csr_ids.length; clobbered_i++) {
-                auto csr_id = clobbered_csr_ids[clobbered_i];
-                auto csr_val = clobbered_csr_values[clobbered_i];
+            void queue_clobbered_mem() {
+                // 2. backtrace all clobbered memory
+                // queue work
+                auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
+                auto clobbered_mem_values = clobber.get_effect_mem_values().array;
+                for (auto clobbered_i = 0; clobbered_i < clobbered_mem_addrs.length;
+                    clobbered_i++) {
+                    auto mem_addr = clobbered_mem_addrs[clobbered_i];
+                    auto mem_val = clobbered_mem_values[clobbered_i];
 
-                // create an info node for this point
-                auto csr_last_node = InfoNode(InfoType.CSR, csr_id, csr_val);
-                csr_last_nodes ~= csr_last_node;
+                    // create an info node for this point
+                    auto mem_last_node = InfoNode(InfoType.Memory, mem_addr, mem_val);
+                    if (!last_node_filter(mem_last_node))
+                        continue; // filter out unselected nodes
+                    mem_last_nodes ~= mem_last_node;
+                }
+            }
+
+            void queue_clobbered_csrs() {
+                // 3. backtrace all clobbered csrs
+                // queue work
+                auto clobbered_csr_ids = clobber.get_effect_csr_ids().array;
+                auto clobbered_csr_values = clobber.get_effect_csr_values().array;
+                for (auto clobbered_i = 0; clobbered_i < clobbered_csr_ids.length;
+                    clobbered_i++) {
+                    auto csr_id = clobbered_csr_ids[clobbered_i];
+                    auto csr_val = clobbered_csr_values[clobbered_i];
+
+                    // create an info node for this point
+                    auto csr_last_node = InfoNode(InfoType.CSR, csr_id, csr_val);
+                    if (!last_node_filter(csr_last_node))
+                        continue; // filter out unselected nodes
+                    csr_last_nodes ~= csr_last_node;
+                }
             }
 
             pragma(inline, true) void log_found_sources(InfoLeaf[] sources) {
@@ -791,8 +806,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 }
             }
 
-            // select serial/parallel task
-            // do work
+            import std.parallelism;
 
             auto gen_analyze_work_loops()() {
                 auto sb = appender!string;
@@ -818,6 +832,12 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 return sb.data;
             }
 
+            // based on selected data, queue last nodes to be traced
+            queue_clobbered_regs();
+            queue_clobbered_mem();
+            queue_clobbered_csrs();
+
+            // generate the work loops, and run them
             mixin(gen_analyze_work_loops!());
         }
 
