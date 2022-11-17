@@ -2,7 +2,7 @@ module infoflow.util;
 
 public import std.string;
 import std.stdio;
-import std.array;
+import std.array: appender;
 import std.conv;
 import std.uni;
 import std.range;
@@ -65,14 +65,17 @@ pragma(inline, true) bool unlikely(bool value) {
     }
 }
 
-string pretty_dump_memory(ubyte[] memory, ulong base_addr) {
+string pretty_dump_memory(ubyte[] memory, ulong base_addr, int pre_spacing = 0) {
+    import std.range: repeat;
+
     // pretty dump memory
     auto memdump_sb = appender!(string);
     enum dump_w = 48;
     enum dump_grp = 4;
 
     for (auto k = 0; k < memory.length; k += dump_w) {
-        memdump_sb ~= "    ";
+        // memdump_sb ~= "    ";
+        memdump_sb ~= ' '.repeat(pre_spacing);
         memdump_sb ~= format("$%08x: ", k + base_addr);
         for (auto l = 0; l < dump_w; l++) {
             if (k + l >= memory.length) {
