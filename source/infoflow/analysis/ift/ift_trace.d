@@ -34,6 +34,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         IFTDataType included_data = IFTDataType.Standard;
         bool function(InfoNode) last_node_filter = x => true;
 
+        InfoNode[] reg_last_nodes;
+        InfoNode[] mem_last_nodes;
+        InfoNode[] csr_last_nodes;
+
         bool enable_ift_graph = false;
         IFTGraph ift_graph = new IFTGraph();
         bool enable_ift_graph_analysis = false;
@@ -701,10 +705,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         }
 
         void analyze_flows() {
-            InfoNode[] reg_last_nodes;
-            InfoNode[] mem_last_nodes;
-            InfoNode[] csr_last_nodes;
-
             void queue_clobbered_regs() {
                 // 1. backtrace all clobbered registers
                 // queue work

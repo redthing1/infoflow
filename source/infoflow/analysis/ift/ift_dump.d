@@ -246,21 +246,24 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
         }
 
         void dump_summary() {
-            auto clobbered_reg_ids = ift.clobber.get_effect_reg_ids().array;
-            auto clobbered_mem_addrs = ift.clobber.get_effect_mem_addrs().array;
-            auto clobered_csr_ids = ift.clobber.get_effect_csr_ids().array;
+            // auto clobbered_reg_ids = ift.clobber.get_effect_reg_ids().array;
+            // auto clobbered_mem_addrs = ift.clobber.get_effect_mem_addrs().array;
+            // auto clobered_csr_ids = ift.clobber.get_effect_csr_ids().array;
+            auto num_regs_traced = ift.reg_last_nodes.length;
+            auto num_mem_traced = ift.mem_last_nodes.length;
+            auto num_csr_traced = ift.csr_last_nodes.length;
 
             // summary
             writefln(" summary:");
             writefln("  num commits:            %8d", ift.trace.commits.length);
             if (ift.included_data & IFTAnalyzer.IFTDataType.Registers) {
-                writefln("  registers traced:       %8d", clobbered_reg_ids.length);
+                writefln("  registers traced:       %8d", num_regs_traced);
             }
             if (ift.included_data & IFTAnalyzer.IFTDataType.Memory) {
-                writefln("  memory traced:          %8d", clobbered_mem_addrs.length);
+                writefln("  memory traced:          %8d", num_mem_traced);
             }
             if (ift.included_data & IFTAnalyzer.IFTDataType.CSR) {
-                writefln("  csr traced:             %8d", clobered_csr_ids.length);
+                writefln("  csr traced:             %8d", num_csr_traced);
             }
             version (analysis_log) {
                 writefln("  found sources:          %8d", ift.log_found_sources);
