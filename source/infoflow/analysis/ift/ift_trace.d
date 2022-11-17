@@ -28,13 +28,13 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             "enum TRegSet must contain a program counter register PC");
     enum PC_REGISTER = to!TRegSet("PC");
 
-    alias IFTNodeFilter = bool function(InfoNode);
+    alias IFTNodeFilter = bool delegate(InfoNode);
 
     /** analyzer for dynamic information flow tracking **/
     final class IFTAnalyzer : TBaseAnalysis.BaseAnalyzer {
         Commit clobber;
         IFTDataType included_data = IFTDataType.Standard;
-        IFTNodeFilter last_node_filter = x => true;
+        IFTNodeFilter last_node_filter;
 
         InfoNode[] reg_last_nodes;
         InfoNode[] mem_last_nodes;
@@ -94,6 +94,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
         this(CommitTrace commit_trace, Config config, bool parallelized = false) {
             this.config = config;
+            this.last_node_filter = x => true;
             super(commit_trace, parallelized);
         }
 
