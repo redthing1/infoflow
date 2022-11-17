@@ -54,17 +54,20 @@ template InfoSimAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 foreach (i, mem_word; raw_mem_page) {
                     emu_state.mem[page_addr + i] = mem_word;
+                    mixin(LOG_DEBUG!(`format("  mem[0x%08x] = 0x%08x", page_addr + i, mem_word)`));
                 }
             }
 
             // copy registers from initial state
             foreach (reg_id; REG_IDS) {
                 emu_state.reg[reg_id] = snap_init.reg[reg_id];
+                mixin(LOG_DEBUG!(`format("  reg[%s] = 0x%08x", reg_id, snap_init.reg[reg_id])`));
             }
 
             // copy csr from initial state
             foreach (csr_id; snap_init.csr.byKey) {
                 emu_state.csr[csr_id] = snap_init.csr[csr_id];
+                mixin(LOG_DEBUG!(`format("  csr[0x%08x] = 0x%08x", csr_id, snap_init.csr[csr_id])`));
             }
         }
 
