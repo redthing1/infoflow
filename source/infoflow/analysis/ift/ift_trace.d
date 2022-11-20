@@ -725,64 +725,75 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         }
 
         void queue_trace_endpoints() {
-            void queue_clobbered_reg(TRegSet reg_id, TRegWord reg_val) {
-                // create an info node for this point
-                auto reg_last_node = InfoNode(InfoType.Register, reg_id, reg_val);
-                reg_last_nodes ~= reg_last_node;
-            }
-
-            void queue_clobbered_mem(TRegWord mem_addr, TMemWord mem_val) {
-                // create an info node for this point
-                auto mem_last_node = InfoNode(InfoType.Memory, mem_addr, mem_val);
-                mem_last_nodes ~= mem_last_node;
-            }
-
-            void queue_clobbered_csr(TRegWord csr_id, TRegWord csr_val) {
-                // create an info node for this point
-                auto csr_last_node = InfoNode(InfoType.CSR, csr_id, csr_val);
-                csr_last_nodes ~= csr_last_node;
+            void queue_node_trace(InfoNode node) {
+                switch (node.type) {
+                case InfoType.Register:
+                    reg_last_nodes ~= node;
+                    break;
+                case InfoType.Memory:
+                    mem_last_nodes ~= node;
+                    break;
+                case InfoType.CSR:
+                    csr_last_nodes ~= node;
+                    break;
+                default:
+                    enforce(0, format("attempted to queue trace for unsupported node type: %s", node));
+                }
             }
 
             // create InfoNodes for all clobbered data
+            InfoNode[] clobbered_last_nodes;
+
+            auto clobbered_reg_ids = clobber.get_effect_reg_ids().array;
+            auto clobbered_reg_values = clobber.get_effect_reg_values().array;
+            for (auto clobbered_i = 0; clobbered_i < clobbered_reg_ids.length; clobbered_i++) {
+                auto reg_id = clobbered_reg_ids[clobbered_i].to!TRegSet;
+                auto reg_val = clobbered_reg_values[clobbered_i];
+
+                clobbered_last_nodes ~= InfoNode(InfoType.Register, reg_id, reg_val);
+            }
+
+            auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
+            auto clobbered_mem_values = clobber.get_effect_mem_values().array;
+            for (auto clobbered_i = 0; clobbered_i < clobbered_mem_addrs.length; clobbered_i++) {
+                auto mem_addr = clobbered_mem_addrs[clobbered_i];
+                auto mem_val = clobbered_mem_values[clobbered_i];
+
+                clobbered_last_nodes ~= InfoNode(InfoType.Memory, mem_addr, mem_val);
+            }
+
+            auto clobbered_csr_ids = clobber.get_effect_csr_ids().array;
+            auto clobbered_csr_values = clobber.get_effect_csr_values().array;
+            for (auto clobbered_i = 0; clobbered_i < clobbered_csr_ids.length; clobbered_i++) {
+                auto csr_id = clobbered_csr_ids[clobbered_i];
+                auto csr_val = clobbered_csr_values[clobbered_i];
+
+                clobbered_last_nodes ~= InfoNode(InfoType.CSR, csr_id, csr_val);
+            }
 
             // based on selected data, queue last nodes to be traced
             switch (config.trace_mode) {
             case IFTTraceMode.Clobber: {
                     // clobber mode - queue everything that was clobbered
-                    auto clobbered_reg_ids = clobber.get_effect_reg_ids().array;
-                    auto clobbered_reg_values = clobber.get_effect_reg_values().array;
-                    for (auto clobbered_i = 0; clobbered_i < clobbered_reg_ids.length;
-                        clobbered_i++) {
-                        auto reg_id = clobbered_reg_ids[clobbered_i].to!TRegSet;
-                        auto reg_val = clobbered_reg_values[clobbered_i];
-
-                        queue_clobbered_reg(reg_id, reg_val);
-                    }
-
-                    auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
-                    auto clobbered_mem_values = clobber.get_effect_mem_values().array;
-                    for (auto clobbered_i = 0; clobbered_i < clobbered_mem_addrs.length;
-                        clobbered_i++) {
-                        auto mem_addr = clobbered_mem_addrs[clobbered_i];
-                        auto mem_val = clobbered_mem_values[clobbered_i];
-
-                        queue_clobbered_mem(mem_addr, mem_val);
-                    }
-
-                    auto clobbered_csr_ids = clobber.get_effect_csr_ids().array;
-                    auto clobbered_csr_values = clobber.get_effect_csr_values().array;
-                    for (auto clobbered_i = 0; clobbered_i < clobbered_csr_ids.length;
-                        clobbered_i++) {
-                        auto csr_id = clobbered_csr_ids[clobbered_i];
-                        auto csr_val = clobbered_csr_values[clobbered_i];
-
-                        queue_clobbered_csr(csr_id, csr_val);
+                    for (auto i = 0; i < clobbered_last_nodes.length; i++) {
+                        queue_node_trace(clobbered_last_nodes[i]);
                     }
                 }
                 break;
-            }
             case IFTTraceMode.Filtered: {
+                    // filtered mode - queue only the data that matches the filter
+                    for (auto i = 0; i < clobbered_last_nodes.length; i++) {
+                        auto node = clobbered_last_nodes[i];
+
+                        if (config.last_node_filter(node)) {
+                            queue_node_trace(node);
+                        }
+                    }
+                }
                 break;
+            default:
+                enforce(0, format("unsupported trace mode: %s", config.trace_mode));
+                assert(0);
             }
         }
 
