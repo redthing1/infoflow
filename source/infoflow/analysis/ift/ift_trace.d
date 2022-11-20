@@ -128,13 +128,14 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             // calculate necessary diffs
-            switch (config.trace_mode) {
-            case IFTTraceMode.Clobber:
-                calculate_clobber();
-                break;
-            default:
-                break;
-            }
+            // switch (config.trace_mode) {
+            // case IFTTraceMode.Clobber:
+            //     calculate_clobber();
+            //     break;
+            // default:
+            //     break;
+            // }
+            calculate_clobber();
             // build caches to traverse commits faster
             calculate_commit_indexes();
             // queue trace data
@@ -157,6 +158,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
         Commit calculate_clobber() {
             // calculate the total clobber commit between the initial and final state
+            mixin(LOG_TRACE!(`"calculating clobber commit"`));
             // 1. reset clobber
             clobber = Commit();
 
@@ -725,6 +727,8 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         }
 
         void queue_trace_endpoints() {
+            mixin(LOG_TRACE!(`"queuing trace endpoints"`));
+
             void queue_node_trace(InfoNode node) {
                 switch (node.type) {
                 case InfoType.Register:
@@ -775,17 +779,22 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             switch (config.trace_mode) {
             case IFTTraceMode.Clobber: {
                     // clobber mode - queue everything that was clobbered
+                    mixin(LOG_TRACE!(`" clobber trace mode: queueing all clobbered nodes"`));
                     for (auto i = 0; i < clobbered_last_nodes.length; i++) {
-                        queue_node_trace(clobbered_last_nodes[i]);
+                        auto node = clobbered_last_nodes[i];
+                        mixin(LOG_DEBUG!(`"  queueing: %s", node`));
+                        queue_node_trace(node);
                     }
                 }
                 break;
             case IFTTraceMode.Filtered: {
                     // filtered mode - queue only the data that matches the filter
+                    mixin(LOG_TRACE!(`" filtered trace mode: filtering clobbered nodes"`));
                     for (auto i = 0; i < clobbered_last_nodes.length; i++) {
                         auto node = clobbered_last_nodes[i];
 
                         if (config.last_node_filter(node)) {
+                            mixin(LOG_DEBUG!(`"  queueing: %s", node`));
                             queue_node_trace(node);
                         }
                     }
