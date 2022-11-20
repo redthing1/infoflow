@@ -33,8 +33,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
     /** analyzer for dynamic information flow tracking **/
     final class IFTAnalyzer : TBaseAnalysis.BaseAnalyzer {
         Commit clobber;
-        IFTDataType included_data = IFTDataType.Standard;
-        IFTNodeFilter last_node_filter;
 
         InfoNode[] reg_last_nodes;
         InfoNode[] mem_last_nodes;
@@ -78,13 +76,15 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             All = (Standard | Special),
         }
 
+        enum IFTTraceMode {
+            Clobber, // trace everything in the calculated clobber commit
+            Filtered, // trace only the info nodes that pass the filter
+        }
+
         struct Config {
-            this(TRegSet[] ignored_regs, TRegWord[] ignored_csr) {
-                foreach (i, id; ignored_regs)
-                    this.ignored_regs[id] = true;
-                foreach (i, id; ignored_csr)
-                    this.ignored_csr[id] = true;
-            }
+            IFTDataType included_data = IFTDataType.Standard;
+            IFTNodeFilter last_node_filter;
+            IFTTraceMode trace_mode = IFTTraceMode.Clobber;
 
             bool[TRegSet] ignored_regs;
             bool[TRegWord] ignored_csr;
@@ -708,59 +708,73 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
         }
 
         void analyze_flows() {
-            void queue_clobbered_regs() {
-                // 1. backtrace all clobbered registers
-                // queue work
-                auto clobbered_reg_ids = clobber.get_effect_reg_ids().array;
-                auto clobbered_reg_values = clobber.get_effect_reg_values().array;
-                for (auto clobbered_i = 0; clobbered_i < clobbered_reg_ids.length;
-                    clobbered_i++) {
-                    auto reg_id = clobbered_reg_ids[clobbered_i].to!TRegSet;
-                    auto reg_val = clobbered_reg_values[clobbered_i];
+            // void queue_clobbered_regs() {
+            //     // 1. backtrace all clobbered registers
+            //     // queue work
+            //     auto clobbered_reg_ids = clobber.get_effect_reg_ids().array;
+            //     auto clobbered_reg_values = clobber.get_effect_reg_values().array;
+            //     for (auto clobbered_i = 0; clobbered_i < clobbered_reg_ids.length;
+            //         clobbered_i++) {
+            //         auto reg_id = clobbered_reg_ids[clobbered_i].to!TRegSet;
+            //         auto reg_val = clobbered_reg_values[clobbered_i];
 
-                    // create an info node for this point
-                    auto reg_last_node = InfoNode(InfoType.Register, reg_id, reg_val);
-                    if (!last_node_filter(reg_last_node))
-                        continue; // filter out unselected nodes
-                    reg_last_nodes ~= reg_last_node;
-                }
+            //         // create an info node for this point
+            //         auto reg_last_node = InfoNode(InfoType.Register, reg_id, reg_val);
+            //         reg_last_nodes ~= reg_last_node;
+            //     }
+            // }
+            void queue_clobbered_reg(TRegSet reg_id, TRegWord reg_val) {
+                // create an info node for this point
+                auto reg_last_node = InfoNode(InfoType.Register, reg_id, reg_val);
+                reg_last_nodes ~= reg_last_node;
             }
 
-            void queue_clobbered_mem() {
-                // 2. backtrace all clobbered memory
-                // queue work
-                auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
-                auto clobbered_mem_values = clobber.get_effect_mem_values().array;
-                for (auto clobbered_i = 0; clobbered_i < clobbered_mem_addrs.length;
-                    clobbered_i++) {
-                    auto mem_addr = clobbered_mem_addrs[clobbered_i];
-                    auto mem_val = clobbered_mem_values[clobbered_i];
+            // void queue_clobbered_mem() {
+            //     // 2. backtrace all clobbered memory
+            //     // queue work
+            //     auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
+            //     auto clobbered_mem_values = clobber.get_effect_mem_values().array;
+            //     for (auto clobbered_i = 0; clobbered_i < clobbered_mem_addrs.length;
+            //         clobbered_i++) {
+            //         auto mem_addr = clobbered_mem_addrs[clobbered_i];
+            //         auto mem_val = clobbered_mem_values[clobbered_i];
 
-                    // create an info node for this point
-                    auto mem_last_node = InfoNode(InfoType.Memory, mem_addr, mem_val);
-                    if (!last_node_filter(mem_last_node))
-                        continue; // filter out unselected nodes
-                    mem_last_nodes ~= mem_last_node;
-                }
+            //         // create an info node for this point
+            //         auto mem_last_node = InfoNode(InfoType.Memory, mem_addr, mem_val);
+            //         mem_last_nodes ~= mem_last_node;
+            //     }
+            // }
+            void queue_clobbered_mem(TRegWord mem_addr, TMemWord mem_val) {
+                // create an info node for this point
+                auto mem_last_node = InfoNode(InfoType.Memory, mem_addr, mem_val);
+                mem_last_nodes ~= mem_last_node;
             }
 
-            void queue_clobbered_csrs() {
-                // 3. backtrace all clobbered csrs
-                // queue work
-                auto clobbered_csr_ids = clobber.get_effect_csr_ids().array;
-                auto clobbered_csr_values = clobber.get_effect_csr_values().array;
-                for (auto clobbered_i = 0; clobbered_i < clobbered_csr_ids.length;
-                    clobbered_i++) {
-                    auto csr_id = clobbered_csr_ids[clobbered_i];
-                    auto csr_val = clobbered_csr_values[clobbered_i];
+            // void queue_clobbered_csrs() {
+            //     // 3. backtrace all clobbered csrs
+            //     // queue work
+            //     auto clobbered_csr_ids = clobber.get_effect_csr_ids().array;
+            //     auto clobbered_csr_values = clobber.get_effect_csr_values().array;
+            //     for (auto clobbered_i = 0; clobbered_i < clobbered_csr_ids.length;
+            //         clobbered_i++) {
+            //         auto csr_id = clobbered_csr_ids[clobbered_i];
+            //         auto csr_val = clobbered_csr_values[clobbered_i];
 
-                    // create an info node for this point
-                    auto csr_last_node = InfoNode(InfoType.CSR, csr_id, csr_val);
-                    if (!last_node_filter(csr_last_node))
-                        continue; // filter out unselected nodes
-                    csr_last_nodes ~= csr_last_node;
-                }
+            //         // create an info node for this point
+            //         auto csr_last_node = InfoNode(InfoType.CSR, csr_id, csr_val);
+            //         csr_last_nodes ~= csr_last_node;
+            //     }
+            // }
+            void queue_clobbered_csr(TRegWord csr_id, TRegWord csr_val) {
+                // create an info node for this point
+                auto csr_last_node = InfoNode(InfoType.CSR, csr_id, csr_val);
+                csr_last_nodes ~= csr_last_node;
             }
+
+            // based on selected data, queue last nodes to be traced
+            // queue_clobbered_regs();
+            // queue_clobbered_mem();
+            // queue_clobbered_csrs();
 
             pragma(inline, true) void log_found_sources(InfoLeaf[] sources) {
                 if (analysis_parallelized) {
@@ -773,9 +787,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             pragma(inline, true) void do_reg_trace(InfoNode last_node) {
-                // auto reg_sources = backtrace_information_flow(last_node);
-                // log_found_sources(reg_sources);
-                // clobbered_regs_sources[cast(TRegSet) last_node.data] = reg_sources;
                 auto reg_backtrace = backtrace_information_flow(last_node);
                 clobbered_regs_sources[cast(TRegSet) last_node.data] = reg_backtrace
                     .terminal_leaves;
@@ -786,9 +797,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             pragma(inline, true) void do_mem_trace(InfoNode last_node) {
-                // auto mem_sources = backtrace_information_flow(last_node);
-                // log_found_sources(mem_sources);
-                // clobbered_mem_sources[last_node.data] = mem_sources;
                 auto mem_backtrace = backtrace_information_flow(last_node);
                 clobbered_mem_sources[last_node.data] = mem_backtrace.terminal_leaves;
 
@@ -798,9 +806,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             }
 
             pragma(inline, true) void do_csr_trace(InfoNode last_node) {
-                // auto csr_sources = backtrace_information_flow(last_node);
-                // log_found_sources(csr_sources);
-                // clobbered_csr_sources[last_node.data] = csr_sources;
                 auto csr_backtrace = backtrace_information_flow(last_node);
                 clobbered_csr_sources[last_node.data] = csr_backtrace.terminal_leaves;
 
@@ -834,11 +839,6 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 return sb.data;
             }
-
-            // based on selected data, queue last nodes to be traced
-            queue_clobbered_regs();
-            queue_clobbered_mem();
-            queue_clobbered_csrs();
 
             // generate the work loops, and run them
             mixin(gen_analyze_work_loops!());
