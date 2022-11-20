@@ -34,8 +34,8 @@ template IFTAnalysisOptimizer(TRegWord, TMemWord, TRegSet) {
             this.ift = ift;
 
             // ensure that graph and graph analysis are enabled
-            enforce(ift.enable_ift_graph, "ift analyzer does not have graph enabled");
-            enforce(ift.enable_ift_graph_analysis, "ift analyzer does not have graph analysis enabled");
+            enforce(ift.config.enable_ift_graph, "ift analyzer does not have graph enabled");
+            enforce(ift.config.enable_ift_graph_analysis, "ift analyzer does not have graph analysis enabled");
         }
 
         void optimize() {

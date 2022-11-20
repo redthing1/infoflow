@@ -26,6 +26,8 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
         }
 
         void dump_clobber() {
+            assert(ift.config.trace_mode == IFTAnalyzer.IFTTraceMode.Clobber,
+                "trace_mode must be clobber in order to dump clobber");
             // 1. dump clobber commit
             writefln(" clobber (%s commits):", ift.trace.commits.length);
 
@@ -36,7 +38,7 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
             auto clobbered_csr_ids = ift.clobber.get_effect_csr_ids().array;
             auto clobbered_csr_values = ift.clobber.get_effect_csr_values().array;
 
-            if (ift.included_data & IFTAnalyzer.IFTDataType.Memory) {
+            if (ift.config.included_data & IFTAnalyzer.IFTDataType.Memory) {
                 // memory
                 writefln("  memory:");
                 for (auto i = 0; i < clobbered_mem_addrs.length; i++) {
@@ -46,7 +48,7 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                 }
             }
 
-            if (ift.included_data & IFTAnalyzer.IFTDataType.Registers) {
+            if (ift.config.included_data & IFTAnalyzer.IFTDataType.Registers) {
                 // registers
                 writefln("  regs:");
                 for (auto i = 0; i < clobbered_reg_ids.length; i++) {
@@ -56,7 +58,7 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                 }
             }
 
-            if (ift.included_data & IFTAnalyzer.IFTDataType.CSR) {
+            if (ift.config.included_data & IFTAnalyzer.IFTDataType.CSR) {
                 // csr
                 writefln("  csr:");
                 for (auto i = 0; i < clobbered_csr_ids.length; i++) {
@@ -107,7 +109,7 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                     } else {
                         sb ~= " -> <init>";
                     }
-                    
+
                     mixin(LOG_TRACE!(`sb.data`));
                 }
             }
@@ -233,7 +235,11 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                     }
 
                     // set color according to flags
-                    node(ift_vert, ["shape": "box", "label": ift_vert.toString(), "color": node_color]);
+                    node(ift_vert, [
+                            "shape": "box",
+                            "label": ift_vert.toString(),
+                            "color": node_color
+                        ]);
                 }
                 foreach (ift_edge; ift.ift_graph.edges) {
                     // edge(edge.src, edge.dst, ["style": "dashed", "label": edge.label]);
@@ -256,13 +262,13 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
             // summary
             writefln(" summary:");
             writefln("  num commits:            %8d", ift.trace.commits.length);
-            if (ift.included_data & IFTAnalyzer.IFTDataType.Registers) {
+            if (ift.config.included_data & IFTAnalyzer.IFTDataType.Registers) {
                 writefln("  registers traced:       %8d", num_regs_traced);
             }
-            if (ift.included_data & IFTAnalyzer.IFTDataType.Memory) {
+            if (ift.config.included_data & IFTAnalyzer.IFTDataType.Memory) {
                 writefln("  memory traced:          %8d", num_mem_traced);
             }
-            if (ift.included_data & IFTAnalyzer.IFTDataType.CSR) {
+            if (ift.config.included_data & IFTAnalyzer.IFTDataType.CSR) {
                 writefln("  csr traced:             %8d", num_csr_traced);
             }
             version (analysis_log) {
@@ -274,10 +280,10 @@ template IFTAnalysisDump(TRegWord, TMemWord, TRegSet) {
                 writefln("  graph cache misses:     %8d", ift.log_graph_nodes_cache_misses);
                 writefln("  node walk duplicates:   %8d", ift.log_global_node_walk_duplicates);
                 writefln("  cache build time:       %7ss", (
-                    cast(double) ift.log_cache_build_time / 1_000_000));
+                        cast(double) ift.log_cache_build_time / 1_000_000));
                 writefln("  propagation walked:     %8d", ift.log_propagation_nodes_walked);
                 writefln("  propagation time:       %7sms", (
-                    cast(double) ift.log_propagation_time / 1_000));
+                        cast(double) ift.log_propagation_time / 1_000));
             }
             writefln("  analysis time:          %7ss", (
                     cast(double) ift.log_analysis_time / 1_000_000));

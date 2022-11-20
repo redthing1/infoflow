@@ -33,16 +33,12 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
     /** analyzer for dynamic information flow tracking **/
     final class IFTAnalyzer : TBaseAnalysis.BaseAnalyzer {
         Commit clobber;
+        IFTGraph ift_graph = new IFTGraph();
 
         InfoNode[] reg_last_nodes;
         InfoNode[] mem_last_nodes;
         InfoNode[] csr_last_nodes;
 
-        bool enable_ift_graph = false;
-        IFTGraph ift_graph = new IFTGraph();
-        bool enable_ift_graph_analysis = false;
-
-        bool aggressive_revisit_skipping = false;
         shared bool[InfoNodeWalk] global_node_walk_visited;
         shared InfoLeaf[] global_info_leafs_buffer;
 
@@ -86,6 +82,10 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             IFTNodeFilter last_node_filter;
             IFTTraceMode trace_mode = IFTTraceMode.Clobber;
 
+            bool enable_ift_graph = false;
+            bool enable_ift_graph_analysis = false;
+            bool aggressive_revisit_skipping = false;
+
             bool[TRegSet] ignored_regs;
             bool[TRegWord] ignored_csr;
         }
@@ -94,8 +94,15 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
         this(CommitTrace commit_trace, Config config, bool parallelized = false) {
             this.config = config;
-            this.last_node_filter = x => true;
+            validate_config();
             super(commit_trace, parallelized);
+        }
+
+        void validate_config() {
+            if (config.trace_mode == IFTTraceMode.Filtered) {
+                enforce(config.last_node_filter !is null,
+                    "last_node_filter must be set when trace_mode is Filtered");
+            }
         }
 
         @property long last_commit_ix() const {
@@ -120,13 +127,23 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 log_propagation_nodes_walked = 0;
             }
 
-            // calculate diffs and clobber
-            calculate_clobber();
+            // calculate necessary diffs
+            switch (config.trace_mode) {
+            case IFTTraceMode.Clobber:
+                calculate_clobber();
+                break;
+            default:
+                break;
+            }
+            // build caches to traverse commits faster
             calculate_commit_indexes();
+            // queue trace data
+            queue_trace_endpoints();
+            // run analysis
             analyze_flows();
 
-            if (enable_ift_graph) {
-                if (enable_ift_graph_analysis) {
+            if (config.enable_ift_graph) {
+                if (config.enable_ift_graph_analysis) {
                     rebuild_graph_caches();
                     propagate_node_flags();
                 }
@@ -143,7 +160,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             // 1. reset clobber
             clobber = Commit();
 
-            if (included_data & IFTDataType.Registers) {
+            if (config.included_data & IFTDataType.Registers) {
                 // 1. find regs that changed
                 for (auto i = 0; i < TInfoLog.REGISTER_COUNT; i++) {
                     TRegSet reg_id = i.to!TRegSet;
@@ -157,7 +174,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 }
             }
 
-            if (included_data & IFTDataType.Memory) {
+            if (config.included_data & IFTDataType.Memory) {
                 foreach (mem_page_addr; snap_init.tracked_mem.pages.byKey) {
                     for (auto i = 0; i < MemoryPageTable.PAGE_SIZE; i++) {
                         auto mem_addr = mem_page_addr + i;
@@ -171,7 +188,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 }
             }
 
-            if (included_data & IFTDataType.CSR) {
+            if (config.included_data & IFTDataType.CSR) {
                 foreach (csr_id; snap_init.csr.byKey) {
                     if (snap_init.get_csr(csr_id) != snap_final.get_csr(csr_id) &&
                         !config.ignored_csr.get(csr_id, false)) {
@@ -503,14 +520,14 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     found_sources_acc++;
 
                 // add a leaf node to the graph
-                if (enable_ift_graph) {
+                if (config.enable_ift_graph) {
                     enforce(!walk.parent.isNull, "walk.parent is null");
                     auto graph_vert = create_graph_vert(walk.parent.get, leaf.node, leaf.commit_id);
                 }
             }
 
             Nullable!IFTGraphNode maybe_last_node_vert;
-            if (enable_ift_graph) {
+            if (config.enable_ift_graph) {
                 // add our "last node" to the graph
 
                 IFTGraphNode last_node_vert;
@@ -547,7 +564,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                     version (analysis_log)
                         node_walk_duplicates_acc++;
 
-                    if (aggressive_revisit_skipping) {
+                    if (config.aggressive_revisit_skipping) {
                         // the fast-track path: we've already visited this node, which implies we've already fully walked its hierarchy
                         // so we can pull its hierarchy from the cache, if it's available
 
@@ -645,7 +662,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
 
                 // create an inner node in the graph for this commit
                 Nullable!IFTGraphNode maybe_curr_graph_vert;
-                if (enable_ift_graph) {
+                if (config.enable_ift_graph) {
                     auto parent = curr.parent.get();
                     auto vert_commit_id = touching_commit_ix;
 
@@ -694,7 +711,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 atomicOp!"+="(this.log_global_node_walk_duplicates, node_walk_duplicates_acc);
             }
 
-            // if (enable_ift_graph && enable_ift_subtree) {
+            // if (config.enable_ift_graph && enable_ift_subtree) {
             //     auto dep_subtree = find_graph_node_dependency_subtree(maybe_last_node_vert.get);
 
             //     // store subtree
@@ -707,75 +724,69 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
             return InformationFlowBacktrace(terminal_leaves_ids.data, maybe_last_node_vert);
         }
 
-        void analyze_flows() {
-            // void queue_clobbered_regs() {
-            //     // 1. backtrace all clobbered registers
-            //     // queue work
-            //     auto clobbered_reg_ids = clobber.get_effect_reg_ids().array;
-            //     auto clobbered_reg_values = clobber.get_effect_reg_values().array;
-            //     for (auto clobbered_i = 0; clobbered_i < clobbered_reg_ids.length;
-            //         clobbered_i++) {
-            //         auto reg_id = clobbered_reg_ids[clobbered_i].to!TRegSet;
-            //         auto reg_val = clobbered_reg_values[clobbered_i];
-
-            //         // create an info node for this point
-            //         auto reg_last_node = InfoNode(InfoType.Register, reg_id, reg_val);
-            //         reg_last_nodes ~= reg_last_node;
-            //     }
-            // }
+        void queue_trace_endpoints() {
             void queue_clobbered_reg(TRegSet reg_id, TRegWord reg_val) {
                 // create an info node for this point
                 auto reg_last_node = InfoNode(InfoType.Register, reg_id, reg_val);
                 reg_last_nodes ~= reg_last_node;
             }
 
-            // void queue_clobbered_mem() {
-            //     // 2. backtrace all clobbered memory
-            //     // queue work
-            //     auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
-            //     auto clobbered_mem_values = clobber.get_effect_mem_values().array;
-            //     for (auto clobbered_i = 0; clobbered_i < clobbered_mem_addrs.length;
-            //         clobbered_i++) {
-            //         auto mem_addr = clobbered_mem_addrs[clobbered_i];
-            //         auto mem_val = clobbered_mem_values[clobbered_i];
-
-            //         // create an info node for this point
-            //         auto mem_last_node = InfoNode(InfoType.Memory, mem_addr, mem_val);
-            //         mem_last_nodes ~= mem_last_node;
-            //     }
-            // }
             void queue_clobbered_mem(TRegWord mem_addr, TMemWord mem_val) {
                 // create an info node for this point
                 auto mem_last_node = InfoNode(InfoType.Memory, mem_addr, mem_val);
                 mem_last_nodes ~= mem_last_node;
             }
 
-            // void queue_clobbered_csrs() {
-            //     // 3. backtrace all clobbered csrs
-            //     // queue work
-            //     auto clobbered_csr_ids = clobber.get_effect_csr_ids().array;
-            //     auto clobbered_csr_values = clobber.get_effect_csr_values().array;
-            //     for (auto clobbered_i = 0; clobbered_i < clobbered_csr_ids.length;
-            //         clobbered_i++) {
-            //         auto csr_id = clobbered_csr_ids[clobbered_i];
-            //         auto csr_val = clobbered_csr_values[clobbered_i];
-
-            //         // create an info node for this point
-            //         auto csr_last_node = InfoNode(InfoType.CSR, csr_id, csr_val);
-            //         csr_last_nodes ~= csr_last_node;
-            //     }
-            // }
             void queue_clobbered_csr(TRegWord csr_id, TRegWord csr_val) {
                 // create an info node for this point
                 auto csr_last_node = InfoNode(InfoType.CSR, csr_id, csr_val);
                 csr_last_nodes ~= csr_last_node;
             }
 
-            // based on selected data, queue last nodes to be traced
-            // queue_clobbered_regs();
-            // queue_clobbered_mem();
-            // queue_clobbered_csrs();
+            // create InfoNodes for all clobbered data
 
+            // based on selected data, queue last nodes to be traced
+            switch (config.trace_mode) {
+            case IFTTraceMode.Clobber: {
+                    // clobber mode - queue everything that was clobbered
+                    auto clobbered_reg_ids = clobber.get_effect_reg_ids().array;
+                    auto clobbered_reg_values = clobber.get_effect_reg_values().array;
+                    for (auto clobbered_i = 0; clobbered_i < clobbered_reg_ids.length;
+                        clobbered_i++) {
+                        auto reg_id = clobbered_reg_ids[clobbered_i].to!TRegSet;
+                        auto reg_val = clobbered_reg_values[clobbered_i];
+
+                        queue_clobbered_reg(reg_id, reg_val);
+                    }
+
+                    auto clobbered_mem_addrs = clobber.get_effect_mem_addrs().array;
+                    auto clobbered_mem_values = clobber.get_effect_mem_values().array;
+                    for (auto clobbered_i = 0; clobbered_i < clobbered_mem_addrs.length;
+                        clobbered_i++) {
+                        auto mem_addr = clobbered_mem_addrs[clobbered_i];
+                        auto mem_val = clobbered_mem_values[clobbered_i];
+
+                        queue_clobbered_mem(mem_addr, mem_val);
+                    }
+
+                    auto clobbered_csr_ids = clobber.get_effect_csr_ids().array;
+                    auto clobbered_csr_values = clobber.get_effect_csr_values().array;
+                    for (auto clobbered_i = 0; clobbered_i < clobbered_csr_ids.length;
+                        clobbered_i++) {
+                        auto csr_id = clobbered_csr_ids[clobbered_i];
+                        auto csr_val = clobbered_csr_values[clobbered_i];
+
+                        queue_clobbered_csr(csr_id, csr_val);
+                    }
+                }
+                break;
+            }
+            case IFTTraceMode.Filtered: {
+                break;
+            }
+        }
+
+        void analyze_flows() {
             pragma(inline, true) void log_found_sources(InfoLeaf[] sources) {
                 if (analysis_parallelized) {
                     // assert(0, "log_found_sources should not be called when parallel enabled");
@@ -791,7 +802,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 clobbered_regs_sources[cast(TRegSet) last_node.data] = reg_backtrace
                     .terminal_leaves;
 
-                if (enable_ift_graph) {
+                if (config.enable_ift_graph) {
                     final_graph_verts ~= reg_backtrace.maybe_graph_vert.get;
                 }
             }
@@ -800,7 +811,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 auto mem_backtrace = backtrace_information_flow(last_node);
                 clobbered_mem_sources[last_node.data] = mem_backtrace.terminal_leaves;
 
-                if (enable_ift_graph) {
+                if (config.enable_ift_graph) {
                     final_graph_verts ~= mem_backtrace.maybe_graph_vert.get;
                 }
             }
@@ -809,7 +820,7 @@ template IFTAnalysis(TRegWord, TMemWord, TRegSet) {
                 auto csr_backtrace = backtrace_information_flow(last_node);
                 clobbered_csr_sources[last_node.data] = csr_backtrace.terminal_leaves;
 
-                if (enable_ift_graph) {
+                if (config.enable_ift_graph) {
                     final_graph_verts ~= csr_backtrace.maybe_graph_vert.get;
                 }
             }
