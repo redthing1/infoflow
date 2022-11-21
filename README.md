@@ -21,7 +21,7 @@ infoflow is designed to be as **architecture-agnostic** as possible, to maximize
 
 ```
 @misc{redthing2022infoflow,
-      title={Experimental Multiarch Dynamic Binary Analysis},
+      title={InfoFlow: Experimental Multiarch Dynamic Binary Analysis via Information Flow Tracking},
       author={redthing1},
       year={2022},
 }
